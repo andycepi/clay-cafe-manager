@@ -1,4 +1,5 @@
 import { Customer, Piece, Event, EventBooking, StudioSettings } from '../types';
+import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { IStorageAdapter } from './storage/IStorageAdapter';
 import { LocalStorageAdapter } from './storage/LocalStorageAdapter';
 import { SupabaseAdapter } from './storage/SupabaseAdapter';
@@ -236,7 +237,7 @@ class Database {
 
   async calculateGlazePrice(cubicInches: number): Promise<number> {
     const studioSettings = await this.getStudioSettings();
-    return Math.round(cubicInches * studioSettings.glazeRatePerCubicInch * 100) / 100;
+    return calculateGlazeCost(cubicInches, studioSettings.glazeRatePerCubicInch);
   }
 
   // Event CRUD operations
@@ -310,7 +311,6 @@ class Database {
       ...overrides,
       id: Date.now().toString(),
       date: newDate || new Date(originalEvent.date.getTime() + 7 * 24 * 60 * 60 * 1000), // Default to next week
-      currentBookings: 0,
       status: 'upcoming',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -320,7 +320,7 @@ class Database {
     return duplicatedEvent;
   }
 
-  async createEventTemplate(name: string, eventData: Omit<Event, 'id' | 'date' | 'createdAt' | 'updatedAt' | 'currentBookings' | 'status'>): Promise<void> {
+  async createEventTemplate(name: string, eventData: Omit<Event, 'id' | 'date' | 'createdAt' | 'updatedAt' | 'status'>): Promise<void> {
     await this.storage.writeOne('eventTemplates', name, {
       ...eventData,
       createdAt: new Date(),
@@ -361,7 +361,6 @@ class Database {
       ...overrides,
       id: Date.now().toString(),
       date,
-      currentBookings: 0,
       status: 'upcoming',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -402,17 +401,6 @@ class Database {
     };
     await this.storage.writeOne('eventBookings', newBooking.id, newBooking);
     
-    // Update event's current bookings count
-    const event = await this.storage.readOne<Event>('events', booking.eventId);
-    if (event) {
-      const updatedEvent = {
-        ...event,
-        currentBookings: event.currentBookings + 1,
-        updatedAt: new Date()
-      };
-      await this.storage.writeOne('events', booking.eventId, updatedEvent);
-    }
-    
     return newBooking;
   }
 
@@ -436,19 +424,6 @@ class Database {
     if (!booking) return false;
     
     const success = await this.storage.deleteOne('eventBookings', id);
-    
-    if (success) {
-      // Update event's current bookings count
-      const event = await this.storage.readOne<Event>('events', booking.eventId);
-      if (event) {
-        const updatedEvent = {
-          ...event,
-          currentBookings: Math.max(0, event.currentBookings - 1),
-          updatedAt: new Date()
-        };
-        await this.storage.writeOne('events', booking.eventId, updatedEvent);
-      }
-    }
     
     return success;
   }

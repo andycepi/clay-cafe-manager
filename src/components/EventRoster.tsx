@@ -17,6 +17,7 @@ import {
 import { Event, Customer, EventBooking, Piece } from '../types';
 import { PIECE_STATUSES } from '../constants';
 import { calculateCustomerPaymentStatus } from '../utils/paymentUtils';
+import { useBulkSelection } from '../hooks/useBulkSelection';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
 import { formatEventDate } from '../utils/dateUtils';
@@ -51,12 +52,15 @@ export const EventRoster: React.FC<EventRosterProps> = ({
   onBookCustomer,
   onBulkStatusUpdate
 }) => {
-  const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
-  const [showBulkActions, setShowBulkActions] = useState(false);
   const [showAllPieces, setShowAllPieces] = useState(false);
 
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
   const eventPieces = pieces.filter(p => p.eventId === event.id);
+  
+  const bulkSelection = useBulkSelection({
+    items: eventPieces,
+    getId: (piece) => piece.id
+  });
   
   const getCustomerPieces = (customerId: string) => {
     return eventPieces.filter(p => p.customerId === customerId);
@@ -68,27 +72,11 @@ export const EventRoster: React.FC<EventRosterProps> = ({
   };
 
 
-  const togglePieceSelection = (pieceId: string) => {
-    setSelectedPieces(prev => 
-      prev.includes(pieceId) 
-        ? prev.filter(id => id !== pieceId)
-        : [...prev, pieceId]
-    );
-  };
-
-  const selectAllEventPieces = () => {
-    if (selectedPieces.length === eventPieces.length) {
-      setSelectedPieces([]);
-    } else {
-      setSelectedPieces(eventPieces.map(p => p.id));
-    }
-  };
 
   const handleBulkStatusUpdate = (status: Piece['status']) => {
-    if (selectedPieces.length > 0) {
-      onBulkStatusUpdate(selectedPieces, status);
-      setSelectedPieces([]);
-      setShowBulkActions(false);
+    if (bulkSelection.selectedCount > 0) {
+      onBulkStatusUpdate(bulkSelection.selectedIds, status);
+      bulkSelection.clearSelection();
     }
   };
 
@@ -157,7 +145,7 @@ export const EventRoster: React.FC<EventRosterProps> = ({
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-white p-3 rounded-lg">
               <div className="text-sm text-gray-500">Capacity</div>
-              <div className="text-lg font-semibold">{event.currentBookings}/{event.maxCapacity}</div>
+              <div className="text-lg font-semibold">{confirmedBookings.length}/{event.maxCapacity}</div>
             </div>
             <div className="bg-white p-3 rounded-lg">
               <div className="text-sm text-gray-500">Checked In</div>
@@ -180,21 +168,21 @@ export const EventRoster: React.FC<EventRosterProps> = ({
         </div>
 
         {/* Bulk Actions for All Pieces View */}
-        {showAllPieces && selectedPieces.length > 0 && (
+        {showAllPieces && bulkSelection.selectedCount > 0 && (
           <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="font-medium text-blue-900">
-                  {selectedPieces.length} piece{selectedPieces.length > 1 ? 's' : ''} selected
+                  {bulkSelection.selectedCount} piece{bulkSelection.selectedCount > 1 ? 's' : ''} selected
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowBulkActions(!showBulkActions)}
+                  onClick={bulkSelection.toggleBulkActions}
                 >
                   Bulk Actions
                 </Button>
-                {showBulkActions && (
+                {bulkSelection.showBulkActions && (
                   <select
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm"
                     onChange={(e) => {
@@ -216,7 +204,7 @@ export const EventRoster: React.FC<EventRosterProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedPieces([])}
+                onClick={bulkSelection.clearSelection}
               >
                 Clear Selection
               </Button>
@@ -234,16 +222,16 @@ export const EventRoster: React.FC<EventRosterProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={selectAllEventPieces}
+                  onClick={bulkSelection.selectAll}
                   className="flex items-center space-x-1"
                 >
-                  {selectedPieces.length === eventPieces.length ? (
+                  {bulkSelection.isAllSelected ? (
                     <CheckSquare size={16} />
                   ) : (
                     <Square size={16} />
                   )}
                   <span>
-                    {selectedPieces.length === eventPieces.length ? 'Deselect All' : 'Select All'}
+                    {bulkSelection.isAllSelected ? 'Deselect All' : 'Select All'}
                   </span>
                 </Button>
                 <span className="text-sm text-gray-600">
@@ -255,7 +243,7 @@ export const EventRoster: React.FC<EventRosterProps> = ({
               <div className="grid grid-cols-1 gap-3">
                 {eventPieces.map(piece => {
                   const customer = customers.find(c => c.id === piece.customerId);
-                  const isSelected = selectedPieces.includes(piece.id);
+                  const isSelected = bulkSelection.isSelected(piece);
                   
                   return (
                     <div
@@ -267,7 +255,7 @@ export const EventRoster: React.FC<EventRosterProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => togglePieceSelection(piece.id)}
+                            onClick={() => bulkSelection.toggleSelection(piece)}
                             className={`p-1 ${isSelected ? 'bg-blue-100 border-blue-500' : ''}`}
                           >
                             {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}

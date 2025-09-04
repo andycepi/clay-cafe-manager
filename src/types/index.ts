@@ -33,7 +33,6 @@ export interface Event {
   startTime: string; // Format: "HH:MM"
   endTime: string; // Format: "HH:MM"
   maxCapacity: number;
-  currentBookings: number;
   price: number;
   type: 'workshop' | 'open-studio' | 'private-party' | 'class' | 'special-event';
   status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled';

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Piece, Customer, Event, StudioSettings } from '../types';
 import { PIECE_STATUSES } from '../constants';
+import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
@@ -16,12 +17,6 @@ interface PieceFormProps {
   onCancel: () => void;
 }
 
-const pieceTypes = [
-  { value: 'handbuilding', label: 'Handbuilding' },
-  { value: 'painting', label: 'Painting' },
-  { value: 'glaze', label: 'Glaze' },
-  { value: 'wheel-throwing', label: 'Wheel Throwing' }
-];
 
 
 export const PieceForm: React.FC<PieceFormProps> = ({
@@ -68,7 +63,7 @@ export const PieceForm: React.FC<PieceFormProps> = ({
   useEffect(() => {
     if (studioSettings && formData.cubicInches && !isNaN(Number(formData.cubicInches))) {
       const volume = Number(formData.cubicInches);
-      const calculatedTotal = volume * studioSettings.glazeRatePerCubicInch;
+      const calculatedTotal = calculateGlazeCost(volume, studioSettings.glazeRatePerCubicInch);
       setFormData(prev => ({ 
         ...prev, 
         glazeTotal: calculatedTotal.toFixed(2)

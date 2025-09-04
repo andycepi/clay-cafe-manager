@@ -30,12 +30,11 @@ export const STATUS_COLORS = {
 } as const;
 
 export const EVENT_TYPE_COLORS = {
-  'pottery-wheel': 'bg-amber-100 text-amber-800',
-  'hand-building': 'bg-green-100 text-green-800',
-  'glazing': 'bg-blue-100 text-blue-800',
-  'painting': 'bg-purple-100 text-purple-800',
-  'firing': 'bg-red-100 text-red-800',
-  'other': 'bg-gray-100 text-gray-800'
+  'workshop': 'bg-blue-100 text-blue-800',
+  'open-studio': 'bg-green-100 text-green-800',
+  'private-party': 'bg-purple-100 text-purple-800',
+  'class': 'bg-orange-100 text-orange-800',
+  'special-event': 'bg-pink-100 text-pink-800'
 } as const;
 
 // Helper functions

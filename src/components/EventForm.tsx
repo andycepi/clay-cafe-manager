@@ -99,7 +99,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         startTime: data.startTime,
         endTime: data.endTime,
         maxCapacity: Number(data.maxCapacity),
-        currentBookings: event?.currentBookings || 0,
         price: Number(data.price),
         type: data.type,
         status: data.status,

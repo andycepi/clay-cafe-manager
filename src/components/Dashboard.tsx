@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Users, Palette, TrendingUp, Calendar } from 'lucide-react';
 import { Customer, Piece, Event, EventBooking, StudioSettings } from '../types';
-import { CustomerCard } from './CustomerCard';
-import { PieceCard } from './PieceCard';
-import { EventCard } from './EventCard';
+import { EventsViewSection } from './EventsViewSection';
+import { PiecesViewSection } from './PiecesViewSection';
+import { CustomersViewSection } from './CustomersViewSection';
+import { OverviewSection } from './OverviewSection';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -18,8 +19,8 @@ import { PieceFormModal } from './PieceFormModal';
 import { PieceEditModal } from './PieceEditModal';
 import { CustomerPiecesSummary } from './CustomerPiecesSummary';
 import { SMSNotificationModal } from './SMSNotificationModal';
+import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { useDatabase } from '../hooks/useDatabase';
-import { useBulkSelection } from '../hooks/useBulkSelection';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
 
@@ -49,11 +50,8 @@ export const Dashboard: React.FC = () => {
     getCustomerById,
     getPiecesReadyForPickup,
     getEventById,
-    getBookingsByEvent,
-    getUpcomingEvents,
     getStudioSettings,
-    duplicateEvent,
-    refreshData
+    duplicateEvent
   } = useDatabase();
 
   const [viewMode, setViewMode] = useState<ViewMode>('events');
@@ -109,8 +107,6 @@ export const Dashboard: React.FC = () => {
     return filtered;
   }, [customers, searchTerm]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -163,13 +159,7 @@ export const Dashboard: React.FC = () => {
     }
 
     return filtered;
-  }, [pieces, searchTerm, filterStatus, getCustomerById, pieceSortMode]);
-
-  // Bulk selection for pieces
-  const pieceBulkSelection = useBulkSelection({
-    items: filteredPieces,
-    getId: (piece) => piece.id
-  });
+  }, [pieces, searchTerm, filterStatus, getCustomerById]);
 
   const filteredEvents = useMemo(() => {
     let filtered = events;
@@ -189,95 +179,6 @@ export const Dashboard: React.FC = () => {
 
     return filtered;
   }, [events, searchTerm, eventFilterStatus]);
-
-  // Grouped and sorted pieces
-  const groupedPieces = useMemo(() => {
-    const sorted = [...filteredPieces];
-
-    switch (pieceSortMode) {
-      case 'status':
-        return [
-          'in-progress',
-          'bisque-fired',
-          'glazed',
-          'glaze-fired',
-          'ready-for-pickup',
-          'picked-up'
-        ].map(status => ({
-          key: status,
-          title: status.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          pieces: sorted.filter(piece => piece.status === status)
-        })).filter(group => group.pieces.length > 0);
-
-      case 'event':
-        const eventGroups = new Map<string, Piece[]>();
-        const noEventPieces: Piece[] = [];
-        
-        sorted.forEach(piece => {
-          if (piece.eventId) {
-            const event = events.find(e => e.id === piece.eventId);
-            const eventKey = event ? `${event.name} - ${event.date.toLocaleDateString()}` : 'Unknown Event';
-            if (!eventGroups.has(eventKey)) {
-              eventGroups.set(eventKey, []);
-            }
-            eventGroups.get(eventKey)!.push(piece);
-          } else {
-            noEventPieces.push(piece);
-          }
-        });
-
-        const groups = Array.from(eventGroups.entries()).map(([eventKey, pieces]) => ({
-          key: eventKey,
-          title: eventKey,
-          pieces
-        }));
-
-        if (noEventPieces.length > 0) {
-          groups.push({
-            key: 'no-event',
-            title: 'No Event Assigned',
-            pieces: noEventPieces
-          });
-        }
-
-        return groups.sort((a, b) => a.title.localeCompare(b.title));
-
-      case 'customer':
-        const customerGroups = new Map<string, Piece[]>();
-        
-        sorted.forEach(piece => {
-          const customer = getCustomerById(piece.customerId);
-          const customerKey = customer ? customer.name : 'Unknown Customer';
-          if (!customerGroups.has(customerKey)) {
-            customerGroups.set(customerKey, []);
-          }
-          customerGroups.get(customerKey)!.push(piece);
-        });
-
-        return Array.from(customerGroups.entries())
-          .map(([customerName, pieces]) => ({
-            key: customerName,
-            title: customerName,
-            pieces
-          }))
-          .sort((a, b) => a.title.localeCompare(b.title));
-
-      case 'date':
-        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        return [{
-          key: 'all',
-          title: 'All Pieces (Newest First)',
-          pieces: sorted
-        }];
-
-      default:
-        return [{
-          key: 'all',
-          title: 'All Pieces',
-          pieces: sorted
-        }];
-    }
-  }, [filteredPieces, pieceSortMode, events, getCustomerById]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -344,22 +245,12 @@ export const Dashboard: React.FC = () => {
     try {
       await Promise.all(pieceIds.map(id => updatePiece(id, { status })));
       toast.success(`Updated ${pieceIds.length} pieces to ${status.replace('-', ' ')}`);
-      pieceBulkSelection.clearSelection();
     } catch (error) {
       console.error('Error updating pieces status:', error);
       toast.error('Failed to update pieces status');
     }
   };
 
-  const handleBulkEventAssign = async (pieceIds: string[], eventId: string) => {
-    try {
-      await Promise.all(pieceIds.map(id => updatePiece(id, { eventId })));
-      const event = events.find(e => e.id === eventId);
-      toast.success(`Assigned ${pieceIds.length} pieces to ${event?.name || 'event'}`);
-    } catch (error) {
-      toast.error('Failed to assign pieces to event');
-    }
-  };
 
   const handleAddPiece = (customerId?: string) => {
     setEditingPiece(undefined);
@@ -477,10 +368,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleViewEventDetails = (event: Event) => {
-    setSelectedEvent(event);
-    setShowEventDetailsModal(true);
-  };
 
   const handleViewEventRoster = (event: Event) => {
     setSelectedEvent(event);
@@ -534,7 +421,7 @@ export const Dashboard: React.FC = () => {
 
   const handleUpdateCubicInches = async (pieceId: string, cubicInches: number) => {
     try {
-      const glazeTotal = studioSettings ? Math.round(cubicInches * studioSettings.glazeRatePerCubicInch * 100) / 100 : 0;
+      const glazeTotal = studioSettings ? calculateGlazeCost(cubicInches, studioSettings.glazeRatePerCubicInch) : 0;
       await updatePiece(pieceId, { cubicInches, glazeTotal });
       toast.success('Cubic inches and glaze cost updated successfully');
     } catch (error) {
@@ -549,8 +436,7 @@ export const Dashboard: React.FC = () => {
       try {
         await Promise.all(pieceIds.map(id => deletePiece(id)));
         toast.success(`Deleted ${pieceIds.length} pieces`);
-        pieceBulkSelection.clearSelection();
-      } catch (error) {
+        } catch (error) {
         console.error('Error deleting pieces:', error);
         toast.error('Failed to delete pieces');
       }
@@ -561,7 +447,6 @@ export const Dashboard: React.FC = () => {
     try {
       await Promise.all(pieceIds.map(id => updatePiece(id, { paidGlaze })));
       toast.success(`Updated payment status for ${pieceIds.length} pieces`);
-      pieceBulkSelection.clearSelection();
     } catch (error) {
       console.error('Error updating payment status:', error);
       toast.error('Failed to update payment status');
@@ -790,294 +675,78 @@ export const Dashboard: React.FC = () => {
 
         {/* Content */}
         {viewMode === 'overview' && (
-          <div className="space-y-6">
-            {/* Ready for Pickup */}
-            {stats.readyForPickup > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Ready for Pickup</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {getPiecesReadyForPickup().map(piece => {
-                    const customer = getCustomerById(piece.customerId);
-                    return customer ? (
-                      <PieceCard
-                        key={piece.id}
-                        piece={piece}
-                        customer={customer}
-                        onEdit={handleEditPiece}
-                        onDelete={handleDeletePiece}
-                        onNotify={handleNotifyCustomer}
-                        onMarkPickedUp={handleMarkPickedUp}
-                        onView={handleViewPiece}
-                        onStatusChange={handleUpdatePieceStatus}
-                        onCubicInchesChange={handleUpdateCubicInches}
-                        onPaymentUpdate={handleUpdatePiecePayment}
-                      />
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Customers */}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Customers</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {customers.slice(0, 6).map(customer => (
-                  <CustomerCard
-                    key={customer.id}
-                    customer={customer}
-                    pieces={pieces.filter(p => p.customerId === customer.id)}
-                    onEdit={handleEditCustomer}
-                    onDelete={handleDeleteCustomer}
-                    onAddPiece={handleAddPiece}
-                    onViewPieces={handleViewCustomerPieces}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+          <OverviewSection
+            customers={customers}
+            pieces={pieces}
+            stats={stats}
+            getPiecesReadyForPickup={getPiecesReadyForPickup}
+            getCustomerById={getCustomerById}
+            onEditPiece={handleEditPiece}
+            onDeletePiece={handleDeletePiece}
+            onNotifyCustomer={handleNotifyCustomer}
+            onMarkPickedUp={handleMarkPickedUp}
+            onViewPiece={handleViewPiece}
+            onUpdatePieceStatus={handleUpdatePieceStatus}
+            onUpdateCubicInches={handleUpdateCubicInches}
+            onUpdatePiecePayment={handleUpdatePiecePayment}
+            onEditCustomer={handleEditCustomer}
+            onDeleteCustomer={handleDeleteCustomer}
+            onAddPiece={handleAddPiece}
+            onViewCustomerPieces={handleViewCustomerPieces}
+          />
         )}
 
         {viewMode === 'customers' && (
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Button type="button" onClick={() => fileInputRef.current?.click()}>
-              Import Customers (CSV)
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              style={{ display: 'none' }}
-              onChange={handleCSVUpload}
-            />
-            {filteredCustomers.map(customer => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-                pieces={pieces.filter(p => p.customerId === customer.id)}
-                onEdit={handleEditCustomer}
-                onDelete={handleDeleteCustomer}
-                onAddPiece={handleAddPiece}
-                onViewPieces={handleViewCustomerPieces}
-              />
-            ))}
-          </div>
+          <CustomersViewSection
+            customers={filteredCustomers}
+            pieces={pieces}
+            searchTerm={searchTerm}
+            onEdit={handleEditCustomer}
+            onDelete={handleDeleteCustomer}
+            onAddPiece={handleAddPiece}
+            onViewPieces={handleViewCustomerPieces}
+            onAddCustomer={handleAddCustomer}
+            onCSVUpload={handleCSVUpload}
+          />
         )}
 
         {viewMode === 'pieces' && (
-          <div>
-            {/* Sorting Navigation */}
-            <div className="mb-6 bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Sort by:</h3>
-                  <div className="flex space-x-2">
-                    {[
-                      { value: 'status', label: 'Status' },
-                      { value: 'event', label: 'Event' },
-                      { value: 'customer', label: 'Customer' },
-                      { value: 'date', label: 'Date' }
-                    ].map(option => (
-                      <button
-                        key={option.value}
-                        onClick={() => setPieceSortMode(option.value as PieceSortMode)}
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          pieceSortMode === option.value
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={pieceBulkSelection.toggleBulkActions}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      pieceBulkSelection.showBulkActions
-                        ? 'bg-green-100 text-green-700 border border-green-300'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {pieceBulkSelection.showBulkActions ? 'Cancel Selection' : 'Bulk Select'}
-                  </button>
-                  {pieceBulkSelection.showBulkActions && (
-                    <div className="text-sm text-gray-600">
-                      {pieceBulkSelection.selectedCount} selected
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bulk Actions Bar */}
-              {pieceBulkSelection.showBulkActions && (
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={pieceBulkSelection.selectAll}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        {pieceBulkSelection.isAllSelected ? 'Deselect All' : 'Select All'}
-                      </button>
-                      {pieceBulkSelection.selectedCount > 0 && (
-                        <span className="text-sm text-gray-500">
-                          ({pieceBulkSelection.selectedCount} of {filteredPieces.length})
-                        </span>
-                      )}
-                    </div>
-                    {pieceBulkSelection.selectedCount > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              handleBulkStatusUpdate(pieceBulkSelection.selectedIds, e.target.value as Piece['status']);
-                              e.target.value = '';
-                            }
-                          }}
-                          className="text-sm border border-gray-300 rounded px-2 py-1"
-                          defaultValue=""
-                        >
-                          <option value="">Update Status...</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="bisque-fired">Bisque Fired</option>
-                          <option value="glazed">Glazed</option>
-                          <option value="glaze-fired">Glaze Fired</option>
-                          <option value="ready-for-pickup">Ready for Pickup</option>
-                          <option value="picked-up">Picked Up</option>
-                        </select>
-                        <button
-                          onClick={() => handleBulkPaymentUpdate(pieceBulkSelection.selectedIds, true)}
-                          className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
-                        >
-                          Mark Paid
-                        </button>
-                        <button
-                          onClick={() => handleBulkPaymentUpdate(pieceBulkSelection.selectedIds, false)}
-                          className="text-sm px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
-                        >
-                          Mark Unpaid
-                        </button>
-                        <button
-                          onClick={() => handleBulkDelete(pieceBulkSelection.selectedIds)}
-                          className="text-sm px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Grouped Pieces */}
-            {groupedPieces.map(group => (
-              <div key={group.key} className="mb-8">
-                <h2 className="text-lg font-semibold capitalize mb-4">{group.title}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {group.pieces.map(piece => {
-                    const customer = getCustomerById(piece.customerId);
-                    return customer ? (
-                      <div key={piece.id} className="relative">
-                        {pieceBulkSelection.showBulkActions && (
-                          <div className="absolute top-2 left-2 z-10">
-                            <input
-                              type="checkbox"
-                              checked={pieceBulkSelection.isSelected(piece)}
-                              onChange={() => pieceBulkSelection.toggleSelection(piece)}
-                              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                          </div>
-                        )}
-                        <PieceCard
-                          key={piece.id}
-                          piece={piece}
-                          customer={customer}
-                          onEdit={handleEditPiece}
-                          onDelete={handleDeletePiece}
-                          onNotify={handleNotifyCustomer}
-                          onMarkPickedUp={handleMarkPickedUp}
-                          onView={handleViewPiece}
-                          onStatusChange={handleUpdatePieceStatus}
-                          onCubicInchesChange={handleUpdateCubicInches}
-                          onPaymentUpdate={handleUpdatePiecePayment}
-                        />
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          /*<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPieces.map(piece => {
-              const customer = getCustomerById(piece.customerId);
-              return customer ? (
-                <PieceCard
-                  key={piece.id}
-                  piece={piece}
-                  customer={customer}
-                  onEdit={handleEditPiece}
-                  onDelete={handleDeletePiece}
-                  onNotify={handleNotifyCustomer}
-                  onMarkPickedUp={handleMarkPickedUp}
-                  onView={handleViewPiece}
-                  onStatusChange={handleUpdatePieceStatus}
-                  onCubicInchesChange={handleUpdateCubicInches}
-                  onPaymentUpdate={handleUpdatePiecePayment}
-                />
-              ) : null;
-            })}
-          </div>*/
+          <PiecesViewSection
+            pieces={filteredPieces}
+            customers={customers}
+            searchTerm={searchTerm}
+            sortMode={pieceSortMode}
+            onSortChange={setPieceSortMode}
+            onEdit={handleEditPiece}
+            onDelete={handleDeletePiece}
+            onNotify={handleNotifyCustomer}
+            onMarkPickedUp={handleMarkPickedUp}
+            onView={handleViewPiece}
+            onStatusChange={handleUpdatePieceStatus}
+            onCubicInchesChange={handleUpdateCubicInches}
+            onPaymentUpdate={handleUpdatePiecePayment}
+            onBulkStatusUpdate={handleBulkStatusUpdate}
+            onBulkPaymentUpdate={handleBulkPaymentUpdate}
+            onBulkDelete={handleBulkDelete}
+            onAddPiece={() => handleAddPiece()}
+            getCustomerById={getCustomerById}
+          />
         )}
 
         {viewMode === 'events' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map(event => (
-              <EventCard
-                key={event.id}
-                event={event}
-                customers={customers}
-                bookings={eventBookings}
-                onEdit={handleEditEvent}
-                onDelete={handleDeleteEvent}
-                onViewRoster={handleViewEventRoster}
-                onDuplicate={handleDuplicateEvent}
-              />
-            ))}
-          </div>
+          <EventsViewSection
+            events={filteredEvents}
+            customers={customers}
+            eventBookings={eventBookings}
+            searchTerm={searchTerm}
+            onEdit={handleEditEvent}
+            onDelete={handleDeleteEvent}
+            onViewRoster={handleViewEventRoster}
+            onDuplicate={handleDuplicateEvent}
+            onAddEvent={handleAddEvent}
+          />
         )}
 
-        {/* Empty State */}
-        {((viewMode === 'customers' && filteredCustomers.length === 0) ||
-          (viewMode === 'pieces' && filteredPieces.length === 0) ||
-          (viewMode === 'events' && filteredEvents.length === 0)) && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              {viewMode === 'customers' ? <Users size={48} /> : 
-               viewMode === 'pieces' ? <Palette size={48} /> : 
-               <Calendar size={48} />}
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No {viewMode} found
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm ? 'Try adjusting your search terms' : `Get started by adding your first ${viewMode.slice(0, -1)}`}
-            </p>
-            <Button onClick={
-              viewMode === 'customers' ? handleAddCustomer : 
-              viewMode === 'pieces' ? () => handleAddPiece() : 
-              handleAddEvent
-            }>
-              Add {viewMode === 'customers' ? 'Customer' : 
-                   viewMode === 'pieces' ? 'Piece' : 'Event'}
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Modals */}

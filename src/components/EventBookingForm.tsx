@@ -80,7 +80,7 @@ export const EventBookingForm: React.FC<EventBookingFormProps> = ({
         <div className="text-sm text-amber-700">
           <p>Date: {formatShortDate(event.date)}</p>
           <p>Time: {event.startTime} - {event.endTime}</p>
-          <p>Available spots: {event.maxCapacity - event.currentBookings}</p>
+          <p>Available spots: {event.maxCapacity - existingBookings.filter(b => b.status === 'confirmed').length}</p>
         </div>
       </div>
 

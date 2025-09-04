@@ -3,6 +3,7 @@ import { Piece } from '../types';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { ImageUpload } from './ui/ImageUpload';
+import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { database } from '../data/database';
 
 interface PieceFormModalProps {
@@ -50,7 +51,7 @@ export const PieceFormModal: React.FC<PieceFormModalProps> = ({
   useEffect(() => {
     // Automatically calculate glaze total when volume changes
     if (formData.cubicInches && formData.cubicInches > 0) {
-      const glazeTotal = Math.round(formData.cubicInches * glazeRate * 100) / 100;
+      const glazeTotal = calculateGlazeCost(formData.cubicInches, glazeRate);
       setFormData(prev => ({
         ...prev,
         glazeTotal

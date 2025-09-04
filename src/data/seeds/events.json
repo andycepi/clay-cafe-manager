@@ -7,7 +7,6 @@
     "startTime": "12:00",
     "endTime": "17:00",
     "maxCapacity": 18,
-    "currentBookings": 0,
     "price": 18,
     "type": "workshop",
     "status": "completed",

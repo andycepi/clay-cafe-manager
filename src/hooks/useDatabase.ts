@@ -177,12 +177,7 @@ export const useDatabase = () => {
     try {
       const newBooking = await database.addEventBooking(bookingData);
       setEventBookings(prev => [...prev, newBooking]);
-      // Update event's current bookings count
-      setEvents(prev => prev.map(e => 
-        e.id === bookingData.eventId 
-          ? { ...e, currentBookings: e.currentBookings + 1 }
-          : e
-      ));
+      // Event capacity is now calculated dynamically from bookings
       return newBooking;
     } catch (error) {
       console.error('Error adding event booking:', error);
@@ -205,25 +200,17 @@ export const useDatabase = () => {
 
   const deleteEventBooking = useCallback(async (id: string) => {
     try {
-      const booking = eventBookings.find(b => b.id === id);
       const success = await database.deleteEventBooking(id);
       if (success) {
         setEventBookings(prev => prev.filter(b => b.id !== id));
-        // Update event's current bookings count
-        if (booking) {
-          setEvents(prev => prev.map(e => 
-            e.id === booking.eventId 
-              ? { ...e, currentBookings: Math.max(0, e.currentBookings - 1) }
-              : e
-          ));
-        }
+        // Event capacity is now calculated dynamically from bookings
       }
       return success;
     } catch (error) {
       console.error('Error deleting event booking:', error);
       throw error;
     }
-  }, [eventBookings]);
+  }, []);
 
   // Utility functions
   const getEventById = useCallback((id: string) => {

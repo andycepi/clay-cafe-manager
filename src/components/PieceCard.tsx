@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Palette, Edit, Trash2, Bell, CheckCircle, Check } from 'lucide-react';
+import { Edit, Trash2, Bell, CheckCircle, Check } from 'lucide-react';
 import { Piece, Customer } from '../types';
+import { PIECE_STATUSES, getPieceStatusInfo } from '../constants';
 import { Button } from './ui/Button';
 import { format } from 'date-fns';
 import { ensureDate } from '../utils/dateUtils';
@@ -18,30 +19,7 @@ interface PieceCardProps {
   onPaymentUpdate: (pieceId: string, field: 'paidGlaze', value: boolean) => void;
 }
 
-const statusColors = {
-  'in-progress': 'bg-blue-100 text-blue-800',
-  'bisque-fired': 'bg-orange-100 text-orange-800',
-  'glazed': 'bg-purple-100 text-purple-800',
-  'glaze-fired': 'bg-indigo-100 text-indigo-800',
-  'ready-for-pickup': 'bg-green-100 text-green-800',
-  'picked-up': 'bg-gray-100 text-gray-800'
-};
 
-const pieceStatuses: Array<{ value: Piece['status']; label: string }> = [
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'bisque-fired', label: 'Bisque Fired' },
-  { value: 'glazed', label: 'Glazed' },
-  { value: 'glaze-fired', label: 'Glaze Fired' },
-  { value: 'ready-for-pickup', label: 'Ready for Pickup' },
-  { value: 'picked-up', label: 'Picked Up' }
-];
-
-const typeIcons = {
-  'handbuilding': '🏺',
-  'painting': '🎨',
-  'glaze': '✨',
-  'wheel-throwing': '⚱️'
-};
 
 export const PieceCard: React.FC<PieceCardProps> = ({
   piece,
@@ -146,9 +124,9 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           <select
             value={piece.status}
             onChange={(e) => onStatusChange(piece.id, e.target.value as Piece['status'])}
-            className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${statusColors[piece.status]}`}
+            className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${getPieceStatusInfo(piece.status).color}`}
           >
-            {pieceStatuses.map(status => (
+            {PIECE_STATUSES.map(status => (
               <option key={status.value} value={status.value}>
                 {status.label}
               </option>

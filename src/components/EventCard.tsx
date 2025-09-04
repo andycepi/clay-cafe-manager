@@ -1,6 +1,7 @@
 import React from 'react';
-import { Calendar, Clock, Users, MapPin, Edit, Trash2, UserPlus, Eye, Copy } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Edit, Trash2, Copy } from 'lucide-react';
 import { Event, Customer, EventBooking } from '../types';
+import { EVENT_TYPE_COLORS, getStatusColor } from '../constants';
 import { Button } from './ui/Button';
 import { format } from 'date-fns';
 import { ensureDate } from '../utils/dateUtils';
@@ -15,20 +16,6 @@ interface EventCardProps {
   onDuplicate: (event: Event) => void;
 }
 
-const eventTypeColors = {
-  'workshop': 'bg-blue-100 text-blue-800',
-  'open-studio': 'bg-green-100 text-green-800',
-  'private-party': 'bg-purple-100 text-purple-800',
-  'class': 'bg-orange-100 text-orange-800',
-  'special-event': 'bg-pink-100 text-pink-800'
-};
-
-const statusColors = {
-  'upcoming': 'bg-green-100 text-green-800',
-  'in-progress': 'bg-blue-100 text-blue-800',
-  'completed': 'bg-gray-100 text-gray-800',
-  'cancelled': 'bg-red-100 text-red-800'
-};
 
 export const EventCard: React.FC<EventCardProps> = ({
   event,
@@ -41,7 +28,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const eventBookings = bookings.filter(b => b.eventId === event.id);
   const confirmedBookings = eventBookings.filter(b => b.status === 'confirmed');
-  const availableSpots = event.maxCapacity - event.currentBookings;
+  const availableSpots = event.maxCapacity - confirmedBookings.length;
   const isFullyBooked = availableSpots <= 0;
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -60,10 +47,10 @@ export const EventCard: React.FC<EventCardProps> = ({
       <div className="mb-4">
         <div className="flex items-center space-x-3 mb-2">
           <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${eventTypeColors[event.type]}`}>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${EVENT_TYPE_COLORS[event.type] || 'bg-gray-100 text-gray-800'}`}>
             {event.type.replace('-', ' ')}
           </span>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[event.status]}`}>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor('event', event.status)}`}>
             {event.status.replace('-', ' ')}
           </span>
         </div>
@@ -107,7 +94,7 @@ export const EventCard: React.FC<EventCardProps> = ({
           </div>
           <div>
             <span className="text-gray-500">Capacity:</span>
-            <span className="ml-2 font-medium">{event.currentBookings}/{event.maxCapacity}</span>
+            <span className="ml-2 font-medium">{confirmedBookings.length}/{event.maxCapacity}</span>
           </div>
         </div>
         
