@@ -19,12 +19,14 @@ import { PieceEditModal } from './PieceEditModal';
 import { CustomerPiecesSummary } from './CustomerPiecesSummary';
 import { SMSNotificationModal } from './SMSNotificationModal';
 import { useDatabase } from '../hooks/useDatabase';
+import { useBulkSelection } from '../hooks/useBulkSelection';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
 
 type ViewMode = 'customers' | 'pieces' | 'events' | 'overview';
 type FilterStatus = 'all' | 'ready-for-pickup' | 'picked-up' | 'in-progress';
 type EventFilterStatus = 'all' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
+type PieceSortMode = 'status' | 'event' | 'customer' | 'date';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -77,6 +79,7 @@ export const Dashboard: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
   const [selectedCustomerForPiece, setSelectedCustomerForPiece] = useState<string | undefined>();
   const [preSelectedCustomerId, setPreSelectedCustomerId] = useState<string | undefined>();
+  const [pieceSortMode, setPieceSortMode] = useState<PieceSortMode>('status');
 
   // Load studio settings
   useEffect(() => {
@@ -160,7 +163,13 @@ export const Dashboard: React.FC = () => {
     }
 
     return filtered;
-  }, [pieces, searchTerm, filterStatus, getCustomerById]);
+  }, [pieces, searchTerm, filterStatus, getCustomerById, pieceSortMode]);
+
+  // Bulk selection for pieces
+  const pieceBulkSelection = useBulkSelection({
+    items: filteredPieces,
+    getId: (piece) => piece.id
+  });
 
   const filteredEvents = useMemo(() => {
     let filtered = events;
@@ -180,6 +189,95 @@ export const Dashboard: React.FC = () => {
 
     return filtered;
   }, [events, searchTerm, eventFilterStatus]);
+
+  // Grouped and sorted pieces
+  const groupedPieces = useMemo(() => {
+    const sorted = [...filteredPieces];
+
+    switch (pieceSortMode) {
+      case 'status':
+        return [
+          'in-progress',
+          'bisque-fired',
+          'glazed',
+          'glaze-fired',
+          'ready-for-pickup',
+          'picked-up'
+        ].map(status => ({
+          key: status,
+          title: status.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          pieces: sorted.filter(piece => piece.status === status)
+        })).filter(group => group.pieces.length > 0);
+
+      case 'event':
+        const eventGroups = new Map<string, Piece[]>();
+        const noEventPieces: Piece[] = [];
+        
+        sorted.forEach(piece => {
+          if (piece.eventId) {
+            const event = events.find(e => e.id === piece.eventId);
+            const eventKey = event ? `${event.name} - ${event.date.toLocaleDateString()}` : 'Unknown Event';
+            if (!eventGroups.has(eventKey)) {
+              eventGroups.set(eventKey, []);
+            }
+            eventGroups.get(eventKey)!.push(piece);
+          } else {
+            noEventPieces.push(piece);
+          }
+        });
+
+        const groups = Array.from(eventGroups.entries()).map(([eventKey, pieces]) => ({
+          key: eventKey,
+          title: eventKey,
+          pieces
+        }));
+
+        if (noEventPieces.length > 0) {
+          groups.push({
+            key: 'no-event',
+            title: 'No Event Assigned',
+            pieces: noEventPieces
+          });
+        }
+
+        return groups.sort((a, b) => a.title.localeCompare(b.title));
+
+      case 'customer':
+        const customerGroups = new Map<string, Piece[]>();
+        
+        sorted.forEach(piece => {
+          const customer = getCustomerById(piece.customerId);
+          const customerKey = customer ? customer.name : 'Unknown Customer';
+          if (!customerGroups.has(customerKey)) {
+            customerGroups.set(customerKey, []);
+          }
+          customerGroups.get(customerKey)!.push(piece);
+        });
+
+        return Array.from(customerGroups.entries())
+          .map(([customerName, pieces]) => ({
+            key: customerName,
+            title: customerName,
+            pieces
+          }))
+          .sort((a, b) => a.title.localeCompare(b.title));
+
+      case 'date':
+        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return [{
+          key: 'all',
+          title: 'All Pieces (Newest First)',
+          pieces: sorted
+        }];
+
+      default:
+        return [{
+          key: 'all',
+          title: 'All Pieces',
+          pieces: sorted
+        }];
+    }
+  }, [filteredPieces, pieceSortMode, events, getCustomerById]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -246,8 +344,10 @@ export const Dashboard: React.FC = () => {
     try {
       await Promise.all(pieceIds.map(id => updatePiece(id, { status })));
       toast.success(`Updated ${pieceIds.length} pieces to ${status.replace('-', ' ')}`);
+      pieceBulkSelection.clearSelection();
     } catch (error) {
-      toast.error('Failed to update pieces');
+      console.error('Error updating pieces status:', error);
+      toast.error('Failed to update pieces status');
     }
   };
 
@@ -426,6 +526,42 @@ export const Dashboard: React.FC = () => {
     try {
       await updatePiece(pieceId, { [field]: value });
       toast.success(`Payment status updated successfully`);
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.error('Failed to update payment status');
+    }
+  };
+
+  const handleUpdateCubicInches = async (pieceId: string, cubicInches: number) => {
+    try {
+      const glazeTotal = studioSettings ? Math.round(cubicInches * studioSettings.glazeRatePerCubicInch * 100) / 100 : 0;
+      await updatePiece(pieceId, { cubicInches, glazeTotal });
+      toast.success('Cubic inches and glaze cost updated successfully');
+    } catch (error) {
+      console.error('Error updating cubic inches:', error);
+      toast.error('Failed to update cubic inches');
+    }
+  };
+
+
+  const handleBulkDelete = async (pieceIds: string[]) => {
+    if (window.confirm(`Are you sure you want to delete ${pieceIds.length} pieces? This action cannot be undone.`)) {
+      try {
+        await Promise.all(pieceIds.map(id => deletePiece(id)));
+        toast.success(`Deleted ${pieceIds.length} pieces`);
+        pieceBulkSelection.clearSelection();
+      } catch (error) {
+        console.error('Error deleting pieces:', error);
+        toast.error('Failed to delete pieces');
+      }
+    }
+  };
+
+  const handleBulkPaymentUpdate = async (pieceIds: string[], paidGlaze: boolean) => {
+    try {
+      await Promise.all(pieceIds.map(id => updatePiece(id, { paidGlaze })));
+      toast.success(`Updated payment status for ${pieceIds.length} pieces`);
+      pieceBulkSelection.clearSelection();
     } catch (error) {
       console.error('Error updating payment status:', error);
       toast.error('Failed to update payment status');
@@ -673,6 +809,8 @@ export const Dashboard: React.FC = () => {
                         onMarkPickedUp={handleMarkPickedUp}
                         onView={handleViewPiece}
                         onStatusChange={handleUpdatePieceStatus}
+                        onCubicInchesChange={handleUpdateCubicInches}
+                        onPaymentUpdate={handleUpdatePiecePayment}
                       />
                     ) : null;
                   })}
@@ -729,41 +867,152 @@ export const Dashboard: React.FC = () => {
 
         {viewMode === 'pieces' && (
           <div>
-          {[
-            'in-progress',
-            'bisque-fired',
-            'glazed',
-            'glaze-fired',
-            'ready-for-pickup',
-            'picked-up'
-          ].map(status => {
-            const piecesByStatus = filteredPieces.filter(piece => piece.status === status);
-            if (piecesByStatus.length === 0) return null;
-            return (
-              <div key={status} className="mb-8">
-                <h2 className="text-lg font-semibold capitalize mb-4">{status.replace(/-/g, ' ')}</h2>
+            {/* Sorting Navigation */}
+            <div className="mb-6 bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Sort by:</h3>
+                  <div className="flex space-x-2">
+                    {[
+                      { value: 'status', label: 'Status' },
+                      { value: 'event', label: 'Event' },
+                      { value: 'customer', label: 'Customer' },
+                      { value: 'date', label: 'Date' }
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => setPieceSortMode(option.value as PieceSortMode)}
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          pieceSortMode === option.value
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={pieceBulkSelection.toggleBulkActions}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      pieceBulkSelection.showBulkActions
+                        ? 'bg-green-100 text-green-700 border border-green-300'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {pieceBulkSelection.showBulkActions ? 'Cancel Selection' : 'Bulk Select'}
+                  </button>
+                  {pieceBulkSelection.showBulkActions && (
+                    <div className="text-sm text-gray-600">
+                      {pieceBulkSelection.selectedCount} selected
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bulk Actions Bar */}
+              {pieceBulkSelection.showBulkActions && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={pieceBulkSelection.selectAll}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        {pieceBulkSelection.isAllSelected ? 'Deselect All' : 'Select All'}
+                      </button>
+                      {pieceBulkSelection.selectedCount > 0 && (
+                        <span className="text-sm text-gray-500">
+                          ({pieceBulkSelection.selectedCount} of {filteredPieces.length})
+                        </span>
+                      )}
+                    </div>
+                    {pieceBulkSelection.selectedCount > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleBulkStatusUpdate(pieceBulkSelection.selectedIds, e.target.value as Piece['status']);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="text-sm border border-gray-300 rounded px-2 py-1"
+                          defaultValue=""
+                        >
+                          <option value="">Update Status...</option>
+                          <option value="in-progress">In Progress</option>
+                          <option value="bisque-fired">Bisque Fired</option>
+                          <option value="glazed">Glazed</option>
+                          <option value="glaze-fired">Glaze Fired</option>
+                          <option value="ready-for-pickup">Ready for Pickup</option>
+                          <option value="picked-up">Picked Up</option>
+                        </select>
+                        <button
+                          onClick={() => handleBulkPaymentUpdate(pieceBulkSelection.selectedIds, true)}
+                          className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                        >
+                          Mark Paid
+                        </button>
+                        <button
+                          onClick={() => handleBulkPaymentUpdate(pieceBulkSelection.selectedIds, false)}
+                          className="text-sm px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                        >
+                          Mark Unpaid
+                        </button>
+                        <button
+                          onClick={() => handleBulkDelete(pieceBulkSelection.selectedIds)}
+                          className="text-sm px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Grouped Pieces */}
+            {groupedPieces.map(group => (
+              <div key={group.key} className="mb-8">
+                <h2 className="text-lg font-semibold capitalize mb-4">{group.title}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {piecesByStatus.map(piece => {
+                  {group.pieces.map(piece => {
                     const customer = getCustomerById(piece.customerId);
                     return customer ? (
-                      <PieceCard
-                        key={piece.id}
-                        piece={piece}
-                        customer={customer}
-                        onEdit={handleEditPiece}
-                        onDelete={handleDeletePiece}
-                        onNotify={handleNotifyCustomer}
-                        onMarkPickedUp={handleMarkPickedUp}
-                        onView={handleViewPiece}
-                        onStatusChange={handleUpdatePieceStatus}
-                      />
+                      <div key={piece.id} className="relative">
+                        {pieceBulkSelection.showBulkActions && (
+                          <div className="absolute top-2 left-2 z-10">
+                            <input
+                              type="checkbox"
+                              checked={pieceBulkSelection.isSelected(piece)}
+                              onChange={() => pieceBulkSelection.toggleSelection(piece)}
+                              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+                        <PieceCard
+                          key={piece.id}
+                          piece={piece}
+                          customer={customer}
+                          onEdit={handleEditPiece}
+                          onDelete={handleDeletePiece}
+                          onNotify={handleNotifyCustomer}
+                          onMarkPickedUp={handleMarkPickedUp}
+                          onView={handleViewPiece}
+                          onStatusChange={handleUpdatePieceStatus}
+                          onCubicInchesChange={handleUpdateCubicInches}
+                          onPaymentUpdate={handleUpdatePiecePayment}
+                        />
+                      </div>
                     ) : null;
                   })}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
           /*<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPieces.map(piece => {
               const customer = getCustomerById(piece.customerId);
@@ -778,6 +1027,8 @@ export const Dashboard: React.FC = () => {
                   onMarkPickedUp={handleMarkPickedUp}
                   onView={handleViewPiece}
                   onStatusChange={handleUpdatePieceStatus}
+                  onCubicInchesChange={handleUpdateCubicInches}
+                  onPaymentUpdate={handleUpdatePiecePayment}
                 />
               ) : null;
             })}

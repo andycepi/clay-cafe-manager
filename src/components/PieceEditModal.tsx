@@ -73,6 +73,7 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
       onClose={onClose}
       title="Edit Piece"
       size="md"
+      zIndex="overlay"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Status */}

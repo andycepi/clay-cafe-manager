@@ -1,5 +1,5 @@
-import React from 'react';
-import { Palette, Edit, Trash2, Bell, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Palette, Edit, Trash2, Bell, CheckCircle, Check } from 'lucide-react';
 import { Piece, Customer } from '../types';
 import { Button } from './ui/Button';
 import { format } from 'date-fns';
@@ -14,6 +14,8 @@ interface PieceCardProps {
   onMarkPickedUp: (pieceId: string) => void;
   onView: (piece: Piece) => void;
   onStatusChange: (pieceId: string, status: Piece['status']) => void;
+  onCubicInchesChange: (pieceId: string, cubicInches: number) => void;
+  onPaymentUpdate: (pieceId: string, field: 'paidGlaze', value: boolean) => void;
 }
 
 const statusColors = {
@@ -49,14 +51,31 @@ export const PieceCard: React.FC<PieceCardProps> = ({
   onNotify,
   onMarkPickedUp,
   onView,
-  onStatusChange
+  onStatusChange,
+  onCubicInchesChange,
+  onPaymentUpdate
 }) => {
   const isReadyForPickup = piece.status === 'ready-for-pickup';
   const isPickedUp = piece.status === 'picked-up';
+  const [localCubicInches, setLocalCubicInches] = useState(piece.cubicInches || 0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const handleCubicInchesInputChange = (value: number) => {
+    setLocalCubicInches(value);
+    setHasUnsavedChanges(value !== (piece.cubicInches || 0));
+  };
+
+  const handleUpdateCubicInches = () => {
+    onCubicInchesChange(piece.id, localCubicInches);
+    setHasUnsavedChanges(false);
+  };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't trigger if clicking on buttons or select elements
-    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('select')) {
+    // Don't trigger if clicking on buttons, select elements, input elements, or labels
+    if ((e.target as HTMLElement).closest('button') || 
+        (e.target as HTMLElement).closest('select') || 
+        (e.target as HTMLElement).closest('input') ||
+        (e.target as HTMLElement).closest('label')) {
       return;
     }
     onView(piece);
@@ -68,11 +87,11 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       onClick={handleCardClick}
     >
       {piece.imageUrl && (
-        <div className="mb-3">
+        <div className="mb-3 aspect-[4/5] overflow-hidden rounded-lg">
           <img 
             src={piece.imageUrl} 
             alt="Piece" 
-            className="w-full h-32 object-cover rounded-lg"
+            className="w-full h-full object-cover"
           />
         </div>
       )}
@@ -137,12 +156,32 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           </select>
         </div>
         
-        {piece.cubicInches && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Cubic Inches:</span>
-            <span className="font-medium">{piece.cubicInches}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-500">Cubic Inches:</span>
+          <div className="flex items-center space-x-1">
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={localCubicInches || ''}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value) || 0;
+                handleCubicInchesInputChange(value);
+              }}
+              className="w-16 px-2 py-1 text-sm font-medium border border-gray-300 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="0"
+            />
+            {hasUnsavedChanges && (
+              <button
+                onClick={handleUpdateCubicInches}
+                className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors"
+                title="Update cubic inches"
+              >
+                <Check size={14} />
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {piece.glazeTotal && piece.glazeTotal > 0 && (
           <div className="flex items-center justify-between">
@@ -153,9 +192,25 @@ export const PieceCard: React.FC<PieceCardProps> = ({
         
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">Paid Glaze:</span>
-          <span className={`font-medium ${piece.paidGlaze ? 'text-green-600' : 'text-red-600'}`}>
-            {piece.paidGlaze ? 'Yes' : 'No'}
-          </span>
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={piece.paidGlaze || false}
+              onChange={(e) => onPaymentUpdate(piece.id, 'paidGlaze', e.target.checked)}
+              className="sr-only"
+            />
+            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+              piece.paidGlaze 
+                ? 'bg-green-500 border-green-500' 
+                : 'bg-white border-gray-300'
+            }`}>
+              {piece.paidGlaze && (
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+          </label>
         </div>
       </div>
 
