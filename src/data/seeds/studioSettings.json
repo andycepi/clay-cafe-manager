@@ -1,0 +1,13 @@
+{
+  "glazeRatePerCubicInch": 0.20,
+  "defaultTicketPrice": 18,
+  "businessHours": {
+    "monday": { "open": "12:00", "close": "18:00" },
+    "tuesday": { "open": "12:00", "close": "18:00" },
+    "wednesday": { "open": "12:00", "close": "18:00" },
+    "thursday": { "open": "12:00", "close": "18:00" },
+    "friday": { "open": "12:00", "close": "18:00" },
+    "saturday": { "open": "12:00", "close": "18:00" },
+    "sunday": { "open": "12:00", "close": "18:00" }
+  }
+}

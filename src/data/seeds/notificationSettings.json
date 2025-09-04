@@ -1,0 +1,6 @@
+{
+  "emailEnabled": true,
+  "smsEnabled": true,
+  "emailTemplate": "Hi {{customerName}}, your ceramic piece is ready for pickup at Clay Cafe! Please come by during our business hours.",
+  "smsTemplate": "Your ceramic piece is ready for pickup at Clay Cafe!"
+}

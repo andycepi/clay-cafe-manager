@@ -1,0 +1,19 @@
+[
+  {
+    "id": "1",
+    "name": "Clay Cafe Template",
+    "description": "",
+    "date": "2025-09-01T00:00:00.000Z",
+    "startTime": "12:00",
+    "endTime": "17:00",
+    "maxCapacity": 18,
+    "currentBookings": 0,
+    "price": 18,
+    "type": "workshop",
+    "status": "completed",
+    "instructor": "house mouse",
+    "location": "house mouse",
+    "createdAt": "2024-08-20T00:00:00.000Z",
+    "updatedAt": "2024-08-28T00:00:00.000Z"
+  }
+]
