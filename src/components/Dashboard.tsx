@@ -514,68 +514,85 @@ export const Dashboard: React.FC = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Clay Cafe Database</h1>
-              <p className="text-gray-600">Manage customers and ceramic pieces</p>
+          <div className="py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+              <div className="mb-4 sm:mb-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clay Cafe Database</h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage customers and ceramic pieces</p>
+              </div>
+              <div className="hidden sm:flex space-x-3">
+                <Button onClick={handleAddCustomer} className="flex items-center space-x-2">
+                  <Users size={16} />
+                  <span>Add Customer</span>
+                </Button>
+                <Button onClick={() => handleAddPiece()} className="flex items-center space-x-2">
+                  <Palette size={16} />
+                  <span>Add Piece</span>
+                </Button>
+                <Button onClick={handleAddEvent} className="flex items-center space-x-2">
+                  <Calendar size={16} />
+                  <span>Add Event</span>
+                </Button>
+              </div>
             </div>
-            <div className="flex space-x-3">
-              <Button onClick={handleAddCustomer} className="flex items-center space-x-2">
-                <Users size={16} />
-                <span>Add Customer</span>
+            {/* Mobile buttons row */}
+            <div className="flex sm:hidden space-x-2 mt-3">
+              <Button onClick={handleAddCustomer} size="sm" className="flex items-center space-x-1 flex-1">
+                <Users size={14} />
+                <span className="text-xs">Add Customer</span>
               </Button>
-              <Button onClick={() => handleAddPiece()} className="flex items-center space-x-2">
-                <Palette size={16} />
-                <span>Add Piece</span>
+              <Button onClick={() => handleAddPiece()} size="sm" className="flex items-center space-x-1 flex-1">
+                <Palette size={14} />
+                <span className="text-xs">Add Piece</span>
               </Button>
-              <Button onClick={handleAddEvent} className="flex items-center space-x-2">
-                <Calendar size={16} />
-                <span>Add Event</span>
+              <Button onClick={handleAddEvent} size="sm" className="flex items-center space-x-1 flex-1">
+                <Calendar size={14} />
+                <span className="text-xs">Add Event</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
             <div className="flex items-center">
-              <Users className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Customers</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalCustomers}</p>
+              <Users className="h-5 w-5 sm:h-8 sm:w-8 text-blue-600" />
+              <div className="ml-2 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Customers</p>
+                <p className="text-lg sm:text-2xl font-semibold text-gray-900">{stats.totalCustomers}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
             <div className="flex items-center">
-              <Palette className="h-8 w-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Pieces</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalPieces}</p>
+              <Palette className="h-5 w-5 sm:h-8 sm:w-8 text-purple-600" />
+              <div className="ml-2 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Pieces</p>
+                <p className="text-lg sm:text-2xl font-semibold text-gray-900">{stats.totalPieces}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
             <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Upcoming Events</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.upcomingEvents}</p>
+              <Calendar className="h-5 w-5 sm:h-8 sm:w-8 text-green-600" />
+              <div className="ml-2 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Upcoming Events</p>
+                <p className="text-lg sm:text-2xl font-semibold text-gray-900">{stats.upcomingEvents}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-amber-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Value</p>
-                <p className="text-2xl font-semibold text-gray-900">${stats.totalValue.toFixed(2)}</p>
+              <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 text-amber-600" />
+              <div className="ml-2 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Value</p>
+                <p className="text-lg sm:text-2xl font-semibold text-gray-900">${stats.totalValue.toFixed(2)}</p>
               </div>
             </div>
           </div>
