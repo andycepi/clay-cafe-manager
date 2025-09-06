@@ -44,9 +44,9 @@ class SMSService {
     const customerName = customer.name.split(' ')[0]; // Use first name
 
     if (messageType === 'ready-for-pickup') {
-      return `Hi ${customerName}! Your ceramic piece is ready for pickup at Clay Cafe. Please come by during our business hours to collect it. Thank you!`;
+      return `Hi ${customerName}! Your ceramic piece from Clay Cafe is ready for pickup. Please come by 12-6pm Mon-Fri to collect it. Thank you!`;
     } else if (messageType === 'ready-to-glaze') {
-      return `Hi ${customerName}! Your ceramic piece has been bisque fired and is ready for glazing at Clay Cafe. Please come by to select your glazes and complete your piece. Thank you!`;
+      return `Hi ${customerName}! Your ceramic piece from Clay Cafe is ready for glazing. Please come to a future Clay Cafe or schedule a Glazing Session here: https://calendar.app.google/wc2gRoz5LrtxShjNA`;
     }
 
     return `Hi ${customerName}! We have an update about your ceramic piece at Clay Cafe. Please contact us for more details.`;

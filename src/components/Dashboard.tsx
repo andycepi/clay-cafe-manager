@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Users, Palette, TrendingUp, Calendar } from 'lucide-react';
+import { Users, Palette, TrendingUp, Calendar, Settings as SettingsIcon } from 'lucide-react';
 import { Customer, Piece, Event, EventBooking, StudioSettings } from '../types';
 import { EventsViewSection } from './EventsViewSection';
 import { PiecesViewSection } from './PiecesViewSection';
@@ -10,21 +10,20 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Modal } from './ui/Modal';
 import { CustomerForm } from './CustomerForm';
-import { PieceForm } from './PieceForm';
 import { EventForm } from './EventForm';
-import { CustomerBookingForm } from './CustomerBookingForm';
+import { SimpleCustomerBooking } from './SimpleCustomerBooking';
 import { EventDetails } from './EventDetails';
 import { EventRoster } from './EventRoster';
-import { PieceFormModal } from './PieceFormModal';
-import { PieceEditModal } from './PieceEditModal';
+import { PieceModal } from './PieceModal';
 import { CustomerPiecesSummary } from './CustomerPiecesSummary';
-import { SMSNotificationModal } from './SMSNotificationModal';
+import { NotificationModal } from './NotificationModal';
+import { Settings } from './Settings';
 import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { useDatabase } from '../hooks/useDatabase';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
 
-type ViewMode = 'customers' | 'pieces' | 'events' | 'overview';
+type ViewMode = 'customers' | 'pieces' | 'events' | 'overview' | 'settings';
 type FilterStatus = 'all' | 'ready-for-pickup' | 'picked-up' | 'in-progress';
 type EventFilterStatus = 'all' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
 type PieceSortMode = 'status' | 'event' | 'customer' | 'date';
@@ -41,6 +40,7 @@ export const Dashboard: React.FC = () => {
     deleteCustomer,
     addPiece,
     updatePiece,
+    updatePiecesBulk,
     deletePiece,
     addEvent,
     updateEvent,
@@ -61,22 +61,20 @@ export const Dashboard: React.FC = () => {
   const [eventFilterStatus, setEventFilterStatus] = useState<EventFilterStatus>('all');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showPieceModal, setShowPieceModal] = useState(false);
+  const [pieceModalMode, setPieceModalMode] = useState<'create' | 'edit'>('create');
   const [showEventModal, setShowEventModal] = useState(false);
   const [showEventBookingModal, setShowEventBookingModal] = useState(false);
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [showEventRosterModal, setShowEventRosterModal] = useState(false);
-  const [showPieceFormModal, setShowPieceFormModal] = useState(false);
   const [showCustomerPiecesModal, setShowCustomerPiecesModal] = useState(false);
-  const [showPieceEditModal, setShowPieceEditModal] = useState(false);
-  const [showSMSModal, setShowSMSModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedCustomerForPieces, setSelectedCustomerForPieces] = useState<Customer | undefined>();
-  const [smsNotificationPiece, setSMSNotificationPiece] = useState<Piece | undefined>();
+  const [notificationPiece, setNotificationPiece] = useState<Piece | undefined>();
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>();
   const [editingPiece, setEditingPiece] = useState<Piece | undefined>();
   const [editingEvent, setEditingEvent] = useState<Event | undefined>();
   const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
   const [selectedCustomerForPiece, setSelectedCustomerForPiece] = useState<string | undefined>();
-  const [preSelectedCustomerId, setPreSelectedCustomerId] = useState<string | undefined>();
   const [pieceSortMode, setPieceSortMode] = useState<PieceSortMode>('status');
 
   // Load studio settings
@@ -228,7 +226,7 @@ export const Dashboard: React.FC = () => {
 
   const handleViewPiece = (piece: Piece) => {
     setEditingPiece(piece);
-    setPreSelectedCustomerId(undefined);
+    setPieceModalMode('edit');
     setShowPieceModal(true);
   };
 
@@ -254,19 +252,21 @@ export const Dashboard: React.FC = () => {
 
   const handleAddPiece = (customerId?: string) => {
     setEditingPiece(undefined);
-    setPreSelectedCustomerId(customerId);
+    setSelectedCustomerForPiece(customerId);
+    setPieceModalMode('create');
     setShowPieceModal(true);
   };
 
   const handleEditPiece = (piece: Piece) => {
     setEditingPiece(piece);
-    setPreSelectedCustomerId(undefined);
+    setPieceModalMode('edit');
     setShowPieceModal(true);
   };
 
   const handleEditPieceFromCustomerSummary = (piece: Piece) => {
     setEditingPiece(piece);
-    setShowPieceEditModal(true);
+    setPieceModalMode('edit');
+    setShowPieceModal(true);
   };
 
   const handleDeletePiece = async (pieceId: string) => {
@@ -287,12 +287,12 @@ export const Dashboard: React.FC = () => {
       return;
     }
 
-    setSMSNotificationPiece(piece);
-    setShowSMSModal(true);
+    setNotificationPiece(piece);
+    setShowNotificationModal(true);
   };
 
-  const handleSMSSent = () => {
-    toast.success('SMS notification sent successfully');
+  const handleNotificationSent = () => {
+    toast.success('Notification sent successfully');
   };
 
   const handleMarkPickedUp = async (pieceId: string) => {
@@ -322,21 +322,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handlePieceSubmit = async (pieceData: Omit<Piece, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      if (editingPiece) {
-        await updatePiece(editingPiece.id, pieceData);
-        toast.success('Piece updated successfully');
-      } else {
-        await addPiece(pieceData);
-        toast.success('Piece added successfully');
-      }
-      setShowPieceModal(false);
-      setPreSelectedCustomerId(undefined);
-    } catch (error) {
-      toast.error('Failed to save piece');
-    }
-  };
 
   // Event handlers
   const handleAddEvent = () => {
@@ -455,32 +440,25 @@ export const Dashboard: React.FC = () => {
 
   const handleAddPieceFromRoster = (customerId: string) => {
     setSelectedCustomerForPiece(customerId);
-    setShowPieceFormModal(true);
+    setPieceModalMode('create');
+    setShowPieceModal(true);
   };
 
-  const handlePieceFormSubmit = async (pieceData: Omit<Piece, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handlePieceModalSubmit = async (pieceData: any) => {
     try {
-      await addPiece(pieceData);
-      toast.success('Piece added successfully');
-      setShowPieceFormModal(false);
+      if (pieceModalMode === 'create') {
+        await addPiece(pieceData);
+        toast.success('Piece added successfully');
+      } else if (editingPiece) {
+        await updatePiece(editingPiece.id, pieceData);
+        toast.success('Piece updated successfully');
+      }
+      setShowPieceModal(false);
       setSelectedCustomerForPiece(undefined);
-    } catch (error) {
-      console.error('Error adding piece:', error);
-      toast.error('Failed to add piece');
-    }
-  };
-
-  const handlePieceEditSubmit = async (pieceData: Omit<Piece, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!editingPiece) return;
-    
-    try {
-      await updatePiece(editingPiece.id, pieceData);
-      toast.success('Piece updated successfully');
-      setShowPieceEditModal(false);
       setEditingPiece(undefined);
     } catch (error) {
-      console.error('Error updating piece:', error);
-      toast.error('Failed to update piece');
+      console.error(`Error ${pieceModalMode === 'create' ? 'adding' : 'updating'} piece:`, error);
+      toast.error(`Failed to ${pieceModalMode === 'create' ? 'add' : 'update'} piece`);
     }
   };
 
@@ -611,7 +589,8 @@ export const Dashboard: React.FC = () => {
                 { key: 'events', label: 'Events', icon: Calendar },
                 { key: 'pieces', label: 'Pieces', icon: Palette },
                 { key: 'customers', label: 'Customers', icon: Users },
-                { key: 'overview', label: 'Overview', icon: TrendingUp }
+                { key: 'overview', label: 'Overview', icon: TrendingUp },
+                { key: 'settings', label: 'Settings', icon: SettingsIcon }
               ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
@@ -714,6 +693,7 @@ export const Dashboard: React.FC = () => {
           <PiecesViewSection
             pieces={filteredPieces}
             customers={customers}
+            events={events}
             searchTerm={searchTerm}
             sortMode={pieceSortMode}
             onSortChange={setPieceSortMode}
@@ -747,6 +727,10 @@ export const Dashboard: React.FC = () => {
           />
         )}
 
+        {viewMode === 'settings' && (
+          <Settings />
+        )}
+
       </div>
 
       {/* Modals */}
@@ -762,29 +746,6 @@ export const Dashboard: React.FC = () => {
         />
       </Modal>
 
-      <Modal
-        isOpen={showPieceModal}
-        onClose={() => {
-          setShowPieceModal(false);
-          setPreSelectedCustomerId(undefined);
-        }}
-        title={editingPiece ? 'Edit Piece' : 'Add Piece'}
-        size="lg"
-        zIndex="overlay"
-      >
-        <PieceForm
-          piece={editingPiece}
-          customers={customers}
-          events={events}
-          studioSettings={studioSettings || undefined}
-          preSelectedCustomerId={preSelectedCustomerId}
-          onSubmit={handlePieceSubmit}
-          onCancel={() => {
-            setShowPieceModal(false);
-            setPreSelectedCustomerId(undefined);
-          }}
-        />
-      </Modal>
 
       <Modal
         isOpen={showEventModal}
@@ -807,7 +768,7 @@ export const Dashboard: React.FC = () => {
         zIndex="overlay"
       >
         {selectedEvent && (
-          <CustomerBookingForm
+          <SimpleCustomerBooking
             event={selectedEvent}
             customers={customers}
             existingBookings={eventBookings}
@@ -878,42 +839,36 @@ export const Dashboard: React.FC = () => {
         />
       )}
 
-      {/* Piece Form Modal */}
-      {showPieceFormModal && selectedCustomerForPiece && (
-        <PieceFormModal
+      {/* Unified Piece Modal */}
+      {showPieceModal && (
+        <PieceModal
+          mode={pieceModalMode}
+          piece={pieceModalMode === 'edit' ? editingPiece : undefined}
+          customers={customers}
+          events={events}
+          studioSettings={studioSettings || undefined}
           customerId={selectedCustomerForPiece}
           eventId={selectedEvent?.id}
-          onSave={handlePieceFormSubmit}
+          onSave={handlePieceModalSubmit}
           onClose={() => {
-            setShowPieceFormModal(false);
+            setShowPieceModal(false);
             setSelectedCustomerForPiece(undefined);
-          }}
-        />
-      )}
-
-      {/* Piece Edit Modal */}
-      {showPieceEditModal && editingPiece && (
-        <PieceEditModal
-          piece={editingPiece}
-          onSave={handlePieceEditSubmit}
-          onClose={() => {
-            setShowPieceEditModal(false);
             setEditingPiece(undefined);
           }}
         />
       )}
 
-      {/* SMS Notification Modal */}
-      {showSMSModal && smsNotificationPiece && (
-        <SMSNotificationModal
-          isOpen={showSMSModal}
+      {/* Notification Modal (SMS & Email) */}
+      {showNotificationModal && notificationPiece && (
+        <NotificationModal
+          isOpen={showNotificationModal}
           onClose={() => {
-            setShowSMSModal(false);
-            setSMSNotificationPiece(undefined);
+            setShowNotificationModal(false);
+            setNotificationPiece(undefined);
           }}
-          customer={getCustomerById(smsNotificationPiece.customerId)!}
-          piece={smsNotificationPiece}
-          onSent={handleSMSSent}
+          customer={getCustomerById(notificationPiece.customerId)!}
+          piece={notificationPiece}
+          onSent={handleNotificationSent}
         />
       )}
     </div>

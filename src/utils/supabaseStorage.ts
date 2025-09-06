@@ -43,7 +43,16 @@ export const supabaseStorage = {
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        return { url: null, path: null, error: uploadError.message };
+        
+        // Provide more helpful error messages based on common issues
+        let errorMessage = uploadError.message;
+        if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
+          errorMessage = `Storage bucket '${BUCKET_NAME}' not found. Please create it in your Supabase project.`;
+        } else if (uploadError.message.includes('policy') || uploadError.message.includes('RLS')) {
+          errorMessage = `Storage permissions error. Please check your RLS policies for the '${BUCKET_NAME}' bucket.`;
+        }
+        
+        return { url: null, path: null, error: errorMessage };
       }
 
       // Get the public URL
@@ -106,17 +115,33 @@ export const supabaseStorage = {
 
   async createBucketIfNotExists(): Promise<void> {
     try {
-      // Check if bucket exists
+      // First, try to check if we can access the bucket by attempting a simple operation
+      // This is safer than trying to list all buckets which may require admin permissions
+      const { data, error: testError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list('', { limit: 1 });
+
+      if (!testError) {
+        // Bucket exists and is accessible
+        console.log(`Bucket ${BUCKET_NAME} is accessible`);
+        return;
+      }
+
+      // If we can't access the bucket, check if it exists
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) {
-        console.error('Error listing buckets:', listError);
+        console.warn('Cannot list buckets (may require admin permissions):', listError.message);
+        // If we can't list buckets, assume the bucket should be created manually
+        // and provide helpful error message
+        console.warn(`Please ensure the '${BUCKET_NAME}' bucket exists in your Supabase project storage.`);
         return;
       }
 
       const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
       
       if (!bucketExists) {
+        // Attempt to create bucket - this may fail due to RLS policies
         const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
           public: true,
           allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
@@ -124,13 +149,20 @@ export const supabaseStorage = {
         });
 
         if (createError) {
-          console.error('Error creating bucket:', createError);
+          console.warn('Cannot create bucket automatically (may require admin permissions):', createError.message);
+          console.warn(`Please manually create a bucket named '${BUCKET_NAME}' in your Supabase project storage with the following settings:`);
+          console.warn('- Public: Yes');
+          console.warn('- Allowed MIME types: image/jpeg, image/png, image/webp');
+          console.warn('- File size limit: 5MB');
         } else {
-          console.log(`Created bucket: ${BUCKET_NAME}`);
+          console.log(`Successfully created bucket: ${BUCKET_NAME}`);
         }
+      } else {
+        console.log(`Bucket ${BUCKET_NAME} already exists`);
       }
     } catch (error) {
-      console.error('Error managing bucket:', error);
+      console.warn('Error managing bucket (this is usually fine if the bucket already exists):', error);
+      console.warn(`If image uploads fail, please ensure the '${BUCKET_NAME}' bucket exists in your Supabase project.`);
     }
   }
 };

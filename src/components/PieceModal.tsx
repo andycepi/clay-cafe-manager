@@ -1,40 +1,75 @@
 import React, { useState, useEffect } from 'react';
-import { Piece } from '../types';
+import { Piece, Customer, Event, StudioSettings } from '../types';
+import { PIECE_STATUSES } from '../constants';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { Select } from './ui/Select';
 import { ImageUpload } from './ui/ImageUpload';
 import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { database } from '../data/database';
 
-interface PieceEditModalProps {
-  piece: Piece;
-  onSave: (updatedPiece: Piece) => void;
+interface PieceModalProps {
+  mode: 'create' | 'edit';
+  piece?: Piece;
+  customers: Customer[];
+  events: Event[];
+  studioSettings?: StudioSettings;
+  customerId?: string;
+  eventId?: string;
+  onSave: (piece: any) => void;
   onClose: () => void;
 }
 
-export const PieceEditModal: React.FC<PieceEditModalProps> = ({
+export const PieceModal: React.FC<PieceModalProps> = ({
+  mode,
   piece,
+  customers,
+  events,
+  studioSettings,
+  customerId,
+  eventId,
   onSave,
   onClose
 }) => {
-  const [formData, setFormData] = useState<Piece>({ ...piece });
+  const [formData, setFormData] = useState(() => {
+    if (mode === 'edit' && piece) {
+      return { ...piece };
+    }
+    // For create mode, use pre-selected customer or first available customer
+    const defaultCustomerId = customerId || (customers.length > 0 ? customers[0].id : '');
+    return {
+      customerId: defaultCustomerId,
+      eventId: eventId || '',
+      status: 'in-progress' as Piece['status'],
+      cubicInches: 0,
+      paidGlaze: false,
+      glazeTotal: 0,
+      imageUrl: undefined,
+      notes: ''
+    };
+  });
+
   const [glazeRate, setGlazeRate] = useState(0.20);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdPieceId, setCreatedPieceId] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadGlazeRate = async () => {
-      try {
-        const settings = await database.getStudioSettings();
-        setGlazeRate(settings.glazeRatePerCubicInch);
-      } catch (error) {
-        console.error('Error loading studio settings:', error);
-      }
-    };
-    loadGlazeRate();
-  }, []);
+    if (studioSettings) {
+      setGlazeRate(studioSettings.glazeRatePerCubicInch);
+    } else {
+      const loadGlazeRate = async () => {
+        try {
+          const settings = await database.getStudioSettings();
+          setGlazeRate(settings.glazeRatePerCubicInch);
+        } catch (error) {
+          console.error('Error loading studio settings:', error);
+        }
+      };
+      loadGlazeRate();
+    }
+  }, [studioSettings]);
 
   useEffect(() => {
-    // Automatically calculate glaze total when volume changes
     if (formData.cubicInches && formData.cubicInches > 0) {
       const glazeTotal = calculateGlazeCost(formData.cubicInches, glazeRate);
       setFormData(prev => ({ ...prev, glazeTotal }));
@@ -43,7 +78,7 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
     }
   }, [formData.cubicInches, glazeRate]);
 
-  const handleInputChange = (field: keyof Piece, value: any) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -52,31 +87,74 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const updatedPiece = await database.updatePiece(piece.id, {
-        ...formData,
-        updatedAt: new Date()
-      });
-
-      if (updatedPiece) {
+      if (mode === 'edit' && piece) {
+        const updatedPiece = await database.updatePiece(piece.id, {
+          ...formData,
+          updatedAt: new Date()
+        });
         onSave(updatedPiece);
+      } else {
+        if (!createdPieceId) {
+          const newPiece = await database.addPiece(formData);
+          setCreatedPieceId(newPiece.id);
+          onSave(formData);
+        } else {
+          await database.updatePiece(createdPieceId, formData);
+          onClose();
+        }
       }
     } catch (error) {
-      console.error('Error updating piece:', error);
-      alert('Failed to update piece. Please try again.');
+      console.error(`Error ${mode === 'edit' ? 'updating' : 'creating'} piece:`, error);
+      alert(`Failed to ${mode === 'edit' ? 'update' : 'create'} piece. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const isCreate = mode === 'create';
+  const title = isCreate ? 'Add New Piece' : 'Edit Piece';
+  const submitText = isSubmitting 
+    ? 'Saving...' 
+    : isCreate && createdPieceId 
+      ? 'Save Changes' 
+      : isCreate 
+        ? 'Create Piece' 
+        : 'Save Changes';
+
   return (
     <Modal
       isOpen={true}
       onClose={onClose}
-      title="Edit Piece"
+      title={title}
       size="md"
       zIndex="overlay"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Customer Selection */}
+        <Select
+          label="Customer *"
+          value={formData.customerId}
+          onChange={(e) => handleInputChange('customerId', e.target.value)}
+          options={customers.map(customer => ({
+            value: customer.id,
+            label: customer.name
+          }))}
+        />
+
+        {/* Event Selection */}
+        <Select
+          label="Event"
+          value={formData.eventId || ''}
+          onChange={(e) => handleInputChange('eventId', e.target.value)}
+          options={[
+            { value: '', label: 'No Event' },
+            ...events.map(event => ({
+              value: event.id,
+              label: `${event.name} (${new Date(event.date).toLocaleDateString()})`
+            }))
+          ]}
+        />
+
         {/* Status */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -85,14 +163,13 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
           <select
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.status}
-            onChange={(e) => handleInputChange('status', e.target.value as Piece['status'])}
+            onChange={(e) => handleInputChange('status', e.target.value)}
           >
-            <option value="in-progress">In Progress</option>
-            <option value="bisque-fired">Bisque Fired</option>
-            <option value="glazed">Glazed</option>
-            <option value="glaze-fired">Glaze Fired</option>
-            <option value="ready-for-pickup">Ready for Pickup</option>
-            <option value="picked-up">Picked Up</option>
+            {PIECE_STATUSES.map(status => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -104,7 +181,7 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
           <ImageUpload
             currentImageUrl={formData.imageUrl}
             onImageChange={(imageUrl) => handleInputChange('imageUrl', imageUrl)}
-            pieceId={piece.id}
+            pieceId={piece?.id || createdPieceId || undefined}
           />
         </div>
 
@@ -165,7 +242,7 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
           />
         </div>
 
-        {/* Form Actions */}
+        {/* Actions */}
         <div className="flex justify-end space-x-3 pt-4 border-t">
           <Button
             type="button"
@@ -180,7 +257,7 @@ export const PieceEditModal: React.FC<PieceEditModalProps> = ({
             variant="primary"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {submitText}
           </Button>
         </div>
       </form>

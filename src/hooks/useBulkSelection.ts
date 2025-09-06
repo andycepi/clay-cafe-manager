@@ -47,11 +47,7 @@ export const useBulkSelection = <T>({ items, getId }: UseBulkSelectionOptions<T>
     setShowBulkActions(prev => !prev);
   }, []);
 
-  // Auto-hide bulk actions when no items selected
   const selectedCount = selectedIds.length;
-  if (selectedCount === 0 && showBulkActions) {
-    setShowBulkActions(false);
-  }
 
   return {
     selectedIds,

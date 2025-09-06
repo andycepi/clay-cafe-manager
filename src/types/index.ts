@@ -54,32 +54,96 @@ export interface EventBooking {
   updatedAt: Date;
 }
 
-export interface NotificationSettings {
-  emailEnabled: boolean;
-  smsEnabled: boolean;
-  emailTemplate: string;
-  smsTemplate: string;
-}
-
 export interface StudioSettings {
-  glazeRatePerCubicInch: number;
-  defaultTicketPrice: number;
-  businessHours: {
-    monday: { open: string; close: string; closed?: boolean };
-    tuesday: { open: string; close: string; closed?: boolean };
-    wednesday: { open: string; close: string; closed?: boolean };
-    thursday: { open: string; close: string; closed?: boolean };
-    friday: { open: string; close: string; closed?: boolean };
-    saturday: { open: string; close: string; closed?: boolean };
-    sunday: { open: string; close: string; closed?: boolean };
-  };
+  id: string;
+  studioName: string;
+  studioAddress?: string;
+  studioPhone?: string;
+  studioEmail?: string;
+  studioWebsite?: string;
+  studioInstagram?: string;
+  
+  // Business hours
+  mondayHours: string;
+  tuesdayHours: string;
+  wednesdayHours: string;
+  thursdayHours: string;
+  fridayHours: string;
+  saturdayHours: string;
+  sundayHours: string;
+  
+  // Pricing settings
+  baseGlazeRate: number;
+  firingFee: number;
+  studioFee: number;
+  
+  // Email settings
+  emailServiceEnabled: boolean;
+  emailjsServiceId?: string;
+  emailjsTemplateId?: string;
+  emailjsPublicKey?: string;
+  emailFromName: string;
+  emailReplyTo?: string;
+  
+  // SMS settings
+  smsServiceEnabled: boolean;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+  
+  // Notification settings
+  autoNotifyReadyPieces: boolean;
+  autoNotifyHoursDelay: number;
+  reminderFrequencyDays: number;
+  
+  // Other settings
+  timezone: string;
+  currency: string;
+  dateFormat: string;
+  
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Legacy properties for backwards compatibility
+  glazeRatePerCubicInch: number; // maps to baseGlazeRate
+  defaultTicketPrice: number; // maps to studioFee
 }
 
-export interface AppState {
-  customers: Customer[];
-  pieces: Piece[];
-  events: Event[];
-  eventBookings: EventBooking[];
-  notificationSettings: NotificationSettings;
-  studioSettings: StudioSettings;
+export interface EmailTemplate {
+  id: string;
+  templateName: string;
+  templateType: 'ready_for_pickup' | 'glazing_reminder' | 'custom';
+  subjectTemplate: string;
+  bodyTemplate: string;
+  isActive: boolean;
+  isDefault: boolean;
+  availableVariables: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SMSTemplate {
+  id: string;
+  templateName: string;
+  templateType: 'ready_for_pickup' | 'glazing_reminder' | 'custom';
+  messageTemplate: string;
+  isActive: boolean;
+  isDefault: boolean;
+  availableVariables: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface NotificationHistory {
+  id: string;
+  customerId: string;
+  notificationType: 'email' | 'sms';
+  templateType: string;
+  recipient: string;
+  subject?: string;
+  message: string;
+  status: 'sent' | 'failed' | 'pending';
+  errorMessage?: string;
+  sentAt?: Date;
+  createdAt: Date;
 }

@@ -107,6 +107,46 @@ export class SupabaseAdapter implements IStorageAdapter {
     }
   }
 
+  async updatePartial<T>(collection: string, id: string, updates: Partial<T>): Promise<void> {
+    try {
+      const tableName = this.mapCollectionName(collection);
+      const convertedUpdates = this.convertToSnakeCase({
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
+      const { error } = await supabase
+        .from(tableName)
+        .update(convertedUpdates)
+        .eq('id', id);
+      if (error) throw new Error(`Failed to update ${id} in ${collection}: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Database updatePartial error for ${collection}:${id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async updateBulk<T>(collection: string, updates: Array<{id: string, data: Partial<T>}>): Promise<void> {
+    try {
+      const tableName = this.mapCollectionName(collection);
+      const timestamp = new Date().toISOString();
+      
+      // Convert all updates to snake_case with timestamp
+      const convertedUpdates = updates.map(update => ({
+        ...this.convertToSnakeCase(update.data),
+        id: update.id,
+        updated_at: timestamp
+      }));
+
+      // Use upsert for bulk operations (more efficient than multiple update calls)
+      const { error } = await supabase
+        .from(tableName)
+        .upsert(convertedUpdates, { onConflict: 'id' });
+      
+      if (error) throw new Error(`Failed to bulk update ${collection}: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Database updateBulk error for ${collection}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async deleteOne(collection: string, id: string): Promise<boolean> {
     try {
       const tableName = this.mapCollectionName(collection);

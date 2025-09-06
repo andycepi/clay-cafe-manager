@@ -47,17 +47,33 @@ export const useDatabase = () => {
   }, []);
 
   const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
+    // Optimistic update - update UI immediately
+    const originalCustomer = customers.find(c => c.id === id);
+    if (originalCustomer) {
+      const optimisticCustomer = {
+        ...originalCustomer,
+        ...updates,
+        updatedAt: new Date()
+      };
+      setCustomers(prev => prev.map(c => c.id === id ? optimisticCustomer : c));
+    }
+
     try {
       const updatedCustomer = await database.updateCustomer(id, updates);
       if (updatedCustomer) {
+        // Update with actual database response
         setCustomers(prev => prev.map(c => c.id === id ? updatedCustomer : c));
       }
       return updatedCustomer;
     } catch (error) {
       console.error('Error updating customer:', error);
+      // Rollback optimistic update on error
+      if (originalCustomer) {
+        setCustomers(prev => prev.map(c => c.id === id ? originalCustomer : c));
+      }
       throw error;
     }
-  }, []);
+  }, [customers]);
 
   const deleteCustomer = useCallback(async (id: string) => {
     try {
@@ -86,17 +102,33 @@ export const useDatabase = () => {
   }, []);
 
   const updatePiece = useCallback(async (id: string, updates: Partial<Piece>) => {
+    // Optimistic update - update UI immediately
+    const originalPiece = pieces.find(p => p.id === id);
+    if (originalPiece) {
+      const optimisticPiece = {
+        ...originalPiece,
+        ...updates,
+        updatedAt: new Date()
+      };
+      setPieces(prev => prev.map(p => p.id === id ? optimisticPiece : p));
+    }
+
     try {
       const updatedPiece = await database.updatePiece(id, updates);
       if (updatedPiece) {
+        // Update with actual database response
         setPieces(prev => prev.map(p => p.id === id ? updatedPiece : p));
       }
       return updatedPiece;
     } catch (error) {
       console.error('Error updating piece:', error);
+      // Rollback optimistic update on error
+      if (originalPiece) {
+        setPieces(prev => prev.map(p => p.id === id ? originalPiece : p));
+      }
       throw error;
     }
-  }, []);
+  }, [pieces]);
 
   const deletePiece = useCallback(async (id: string) => {
     try {
@@ -110,6 +142,43 @@ export const useDatabase = () => {
       throw error;
     }
   }, []);
+
+  const updatePiecesBulk = useCallback(async (updates: Array<{id: string, data: Partial<Piece>}>) => {
+    // Optimistic updates - update UI immediately
+    const optimisticUpdates = new Map<string, Piece>();
+    updates.forEach(({ id, data }) => {
+      const originalPiece = pieces.find(p => p.id === id);
+      if (originalPiece) {
+        optimisticUpdates.set(id, {
+          ...originalPiece,
+          ...data,
+          updatedAt: new Date()
+        });
+      }
+    });
+
+    if (optimisticUpdates.size > 0) {
+      setPieces(prev => prev.map(p => optimisticUpdates.get(p.id) || p));
+    }
+
+    try {
+      const updatedPieces = await database.updatePiecesBulk(updates);
+      // Update with actual database response
+      const updatedMap = new Map(updatedPieces.map(p => [p.id, p]));
+      setPieces(prev => prev.map(p => updatedMap.get(p.id) || p));
+      return updatedPieces;
+    } catch (error) {
+      console.error('Error bulk updating pieces:', error);
+      // Rollback optimistic updates on error
+      if (optimisticUpdates.size > 0) {
+        setPieces(prev => prev.map(p => {
+          const originalPiece = pieces.find(orig => orig.id === p.id);
+          return originalPiece || p;
+        }));
+      }
+      throw error;
+    }
+  }, [pieces]);
 
   // Utility functions
   const getCustomerById = useCallback((id: string) => {
@@ -261,6 +330,7 @@ export const useDatabase = () => {
     deleteCustomer,
     addPiece,
     updatePiece,
+    updatePiecesBulk,
     deletePiece,
     addEvent,
     updateEvent,

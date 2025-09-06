@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Send, X, Phone, User } from 'lucide-react';
+import { MessageSquare, X, Phone, User, Mail } from 'lucide-react';
 import { Customer, Piece } from '../types';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { smsService, SMSNotificationOptions } from '../services/smsService';
+import { emailService, EmailNotificationOptions } from '../services/emailService';
 
-interface SMSNotificationModalProps {
+interface NotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer;
@@ -13,7 +14,7 @@ interface SMSNotificationModalProps {
   onSent?: () => void;
 }
 
-export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
+export const NotificationModal: React.FC<NotificationModalProps> = ({
   isOpen,
   onClose,
   customer,
@@ -21,7 +22,9 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
   onSent
 }) => {
   const [message, setMessage] = useState('');
+  const [subject, setSubject] = useState('');
   const [messageType, setMessageType] = useState<'ready-for-pickup' | 'ready-to-glaze'>('ready-for-pickup');
+  const [notificationType, setNotificationType] = useState<'sms' | 'email'>('sms');
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ success: boolean; error?: string } | null>(null);
 
@@ -36,21 +39,33 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
     }
   }, [piece.status]);
 
-  // Generate default message when modal opens or message type changes
+  // Generate default message when modal opens or settings change
   useEffect(() => {
     if (isOpen) {
-      const options: SMSNotificationOptions = {
-        customer,
-        piece,
-        messageType
-      };
-      const defaultMessage = smsService.generateDefaultMessage(options);
-      setMessage(defaultMessage);
+      if (notificationType === 'sms') {
+        const options: SMSNotificationOptions = {
+          customer,
+          piece,
+          messageType
+        };
+        const defaultMessage = smsService.generateDefaultMessage(options);
+        setMessage(defaultMessage);
+      } else {
+        const options: EmailNotificationOptions = {
+          customer,
+          piece,
+          messageType
+        };
+        const defaultMessage = emailService.generateDefaultMessage(options);
+        const defaultSubject = emailService.generateDefaultSubject(options);
+        setMessage(defaultMessage);
+        setSubject(defaultSubject);
+      }
       setSendResult(null);
     }
-  }, [isOpen, customer, piece, messageType]);
+  }, [isOpen, customer, piece, messageType, notificationType]);
 
-  const handleSend = async () => {
+  const handleSendSMS = async () => {
     if (!message.trim()) {
       setSendResult({ success: false, error: 'Message cannot be empty' });
       return;
@@ -89,7 +104,59 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
     } catch (error) {
       setSendResult({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send message'
+        error: error instanceof Error ? error.message : 'Failed to send SMS'
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!message.trim()) {
+      setSendResult({ success: false, error: 'Message cannot be empty' });
+      return;
+    }
+
+    if (!subject.trim()) {
+      setSendResult({ success: false, error: 'Subject cannot be empty' });
+      return;
+    }
+
+    if (!customer.email) {
+      setSendResult({ success: false, error: 'Customer does not have an email address' });
+      return;
+    }
+
+    if (!emailService.validateEmail(customer.email)) {
+      setSendResult({ success: false, error: 'Invalid email address format' });
+      return;
+    }
+
+    setIsSending(true);
+    setSendResult(null);
+
+    try {
+      const options: EmailNotificationOptions & { finalMessage: string; finalSubject: string } = {
+        customer,
+        piece,
+        messageType,
+        finalMessage: message.trim(),
+        finalSubject: subject.trim()
+      };
+
+      const result = await emailService.sendEmail(options);
+      setSendResult(result);
+
+      if (result.success) {
+        setTimeout(() => {
+          onSent?.();
+          onClose();
+        }, 2000);
+      }
+    } catch (error) {
+      setSendResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send email'
       });
     } finally {
       setIsSending(false);
@@ -98,24 +165,46 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
 
   const handleMessageTypeChange = (type: 'ready-for-pickup' | 'ready-to-glaze') => {
     setMessageType(type);
-    const options: SMSNotificationOptions = {
-      customer,
-      piece,
-      messageType: type
-    };
-    const defaultMessage = smsService.generateDefaultMessage(options);
-    setMessage(defaultMessage);
+    
+    if (notificationType === 'sms') {
+      const options: SMSNotificationOptions = {
+        customer,
+        piece,
+        messageType: type
+      };
+      const defaultMessage = smsService.generateDefaultMessage(options);
+      setMessage(defaultMessage);
+    } else {
+      const options: EmailNotificationOptions = {
+        customer,
+        piece,
+        messageType: type
+      };
+      const defaultMessage = emailService.generateDefaultMessage(options);
+      const defaultSubject = emailService.generateDefaultSubject(options);
+      setMessage(defaultMessage);
+      setSubject(defaultSubject);
+    }
+  };
+
+  const handleNotificationTypeChange = (type: 'sms' | 'email') => {
+    setNotificationType(type);
+    setSendResult(null);
   };
 
   const characterCount = message.length;
-  const maxCharacters = 160; // Standard SMS length
+  const maxCharacters = notificationType === 'sms' ? 160 : 1000;
   const isOverLimit = characterCount > maxCharacters;
+
+  const canSendSMS = customer.phone && message.trim();
+  const canSendEmail = customer.email && message.trim() && subject.trim();
+  const canSend = notificationType === 'sms' ? canSendSMS : canSendEmail;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Send SMS Notification"
+      title="Send Customer Notification"
       size="lg"
       zIndex="elevated"
     >
@@ -128,14 +217,20 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">{customer.name}</h3>
-              <div className="flex items-center space-x-1 text-sm text-gray-600">
-                <Phone size={14} />
-                <span>
-                  {customer.phone ? 
-                    smsService.formatPhoneNumber(customer.phone) : 
-                    'No phone number'
-                  }
-                </span>
+              <div className="space-y-1 text-sm text-gray-600">
+                <div className="flex items-center space-x-1">
+                  <Phone size={14} />
+                  <span>
+                    {customer.phone ? 
+                      smsService.formatPhoneNumber(customer.phone) : 
+                      'No phone number'
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Mail size={14} />
+                  <span>{customer.email || 'No email address'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -153,16 +248,54 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
           </div>
         </div>
 
-        {!customer.phone && (
+        {/* Notification Type Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notification Method
+          </label>
+          <div className="flex space-x-4">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                value="sms"
+                checked={notificationType === 'sms'}
+                onChange={(e) => handleNotificationTypeChange(e.target.value as 'sms')}
+                className="mr-2"
+                disabled={!customer.phone}
+              />
+              <Phone size={16} className="mr-1" />
+              <span className="text-sm">SMS Text</span>
+              {!customer.phone && <span className="text-xs text-gray-500 ml-1">(No phone)</span>}
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                value="email"
+                checked={notificationType === 'email'}
+                onChange={(e) => handleNotificationTypeChange(e.target.value as 'email')}
+                className="mr-2"
+                disabled={!customer.email}
+              />
+              <Mail size={16} className="mr-1" />
+              <span className="text-sm">Email</span>
+              {!customer.email && <span className="text-xs text-gray-500 ml-1">(No email)</span>}
+            </label>
+          </div>
+        </div>
+
+        {/* Cannot send notification warning */}
+        {((notificationType === 'sms' && !customer.phone) || (notificationType === 'email' && !customer.email)) && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="flex items-center space-x-2 text-red-800">
               <X size={16} />
-              <span className="text-sm font-medium">Cannot send SMS: Customer has no phone number</span>
+              <span className="text-sm font-medium">
+                Cannot send {notificationType.toUpperCase()}: Customer has no {notificationType === 'sms' ? 'phone number' : 'email address'}
+              </span>
             </div>
           </div>
         )}
 
-        {customer.phone && (
+        {canSend && (
           <>
             {/* Message Type Selection */}
             <div>
@@ -193,6 +326,22 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
               </div>
             </div>
 
+            {/* Email Subject (only for email) */}
+            {notificationType === 'email' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Email subject..."
+                />
+              </div>
+            )}
+
             {/* Message Editor */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -204,13 +353,13 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                rows={4}
+                rows={notificationType === 'email' ? 8 : 4}
                 className={`block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
                   isOverLimit ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter your message..."
               />
-              {isOverLimit && (
+              {isOverLimit && notificationType === 'sms' && (
                 <p className="text-xs text-red-600 mt-1">
                   Messages over 160 characters may be split into multiple SMS messages
                 </p>
@@ -229,8 +378,10 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
                 }`}>
                   {sendResult.success ? (
                     <>
-                      <MessageSquare size={16} />
-                      <span className="text-sm font-medium">Message sent successfully!</span>
+                      {notificationType === 'sms' ? <MessageSquare size={16} /> : <Mail size={16} />}
+                      <span className="text-sm font-medium">
+                        {notificationType === 'sms' ? 'SMS' : 'Email'} sent successfully!
+                      </span>
                     </>
                   ) : (
                     <>
@@ -255,8 +406,8 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
               </Button>
               <Button
                 variant="primary"
-                onClick={handleSend}
-                disabled={isSending || !message.trim() || !customer.phone}
+                onClick={notificationType === 'sms' ? handleSendSMS : handleSendEmail}
+                disabled={isSending || !canSend}
                 className="flex items-center space-x-2"
               >
                 {isSending ? (
@@ -266,8 +417,8 @@ export const SMSNotificationModal: React.FC<SMSNotificationModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Send size={16} />
-                    <span>Send SMS</span>
+                    {notificationType === 'sms' ? <MessageSquare size={16} /> : <Mail size={16} />}
+                    <span>Send {notificationType === 'sms' ? 'SMS' : 'Email'}</span>
                   </>
                 )}
               </Button>

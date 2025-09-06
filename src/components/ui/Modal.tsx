@@ -39,28 +39,32 @@ export const Modal: React.FC<ModalProps> = ({
   if (!modalRoot) return null;
 
   return createPortal(
-    <div className={`fixed inset-0 ${zIndexClasses[zIndex]} overflow-y-auto`}>
+    <div className={`fixed inset-0 ${zIndexClasses[zIndex]} overflow-y-auto animate-in fade-in duration-300`}>
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={onClose}></div>
-        </div>
+        <div 
+          className="fixed inset-0 transition-all duration-300 backdrop-blur-sm bg-black/40" 
+          aria-hidden="true"
+          onClick={onClose}
+        ></div>
 
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div className={`inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full ${sizeClasses[size]}`}>
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+        <div className={`inline-block align-bottom bg-gradient-to-br from-white via-white to-gray-50/80 rounded-2xl text-left overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl transform transition-all duration-300 animate-in slide-in-from-bottom-4 sm:my-8 sm:align-middle w-full ${sizeClasses[size]}`}>
+          <div className="bg-gradient-to-r from-transparent via-white/20 to-transparent px-6 pt-6 pb-4 sm:p-8 sm:pb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text">{title}</h3>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="p-1"
+                className="rounded-full p-2 hover:bg-gray-100/80 transition-all duration-200 hover:scale-110"
               >
-                <X size={16} />
+                <X size={18} className="text-gray-500 hover:text-gray-700" />
               </Button>
             </div>
-            {children}
+            <div className="relative">
+              {children}
+            </div>
           </div>
         </div>
       </div>

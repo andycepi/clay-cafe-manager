@@ -6,25 +6,9 @@ import { SupabaseAdapter } from './storage/SupabaseAdapter';
 // import { DataSeeder } from './seeds/DataSeeder';
 
 
-const defaultNotificationSettings = {
-  emailEnabled: true,
-  smsEnabled: true,
-  emailTemplate: 'Hi {{customerName}}, your ceramic piece is ready for pickup at Clay Cafe! Please come by during our business hours.',
-  smsTemplate: 'Your ceramic piece is ready for pickup at Clay Cafe!'
-};
-
-const defaultStudioSettings: StudioSettings = {
+const defaultStudioSettings: Partial<StudioSettings> = {
   glazeRatePerCubicInch: 0.20,
-  defaultTicketPrice: 15,
-  businessHours: {
-    monday: { open: "10:00", close: "18:00" },
-    tuesday: { open: "10:00", close: "18:00" },
-    wednesday: { open: "10:00", close: "18:00" },
-    thursday: { open: "10:00", close: "20:00" },
-    friday: { open: "10:00", close: "20:00" },
-    saturday: { open: "09:00", close: "18:00" },
-    sunday: { open: "12:00", close: "17:00" }
-  }
+  defaultTicketPrice: 15
 };
 
 class Database {
@@ -140,7 +124,14 @@ class Database {
       ...updates,
       updatedAt: new Date()
     };
-    await this.storage.writeOne('customers', id, updatedCustomer);
+
+    // Use partial update if available (more efficient)
+    if (this.storage.updatePartial) {
+      await this.storage.updatePartial('customers', id, updates);
+    } else {
+      await this.storage.writeOne('customers', id, updatedCustomer);
+    }
+    
     return updatedCustomer;
   }
 
@@ -196,7 +187,14 @@ class Database {
       ...updates,
       updatedAt: new Date()
     };
-    await this.storage.writeOne('pieces', id, updatedPiece);
+
+    // Use partial update if available (more efficient)
+    if (this.storage.updatePartial) {
+      await this.storage.updatePartial('pieces', id, updates);
+    } else {
+      await this.storage.writeOne('pieces', id, updatedPiece);
+    }
+    
     return updatedPiece;
   }
 
@@ -205,26 +203,94 @@ class Database {
     return await this.storage.deleteOne('pieces', id);
   }
 
-  // Notification settings
-  async getNotificationSettings() {
+  async updatePiecesBulk(updates: Array<{id: string, data: Partial<Piece>}>): Promise<Piece[]> {
     await this.ensureInitialized();
-    const settings = await this.storage.readOne('notificationSettings', 'default');
-    return settings || defaultNotificationSettings;
+    
+    if (this.storage.updateBulk) {
+      // Use efficient bulk update if available
+      await this.storage.updateBulk('pieces', updates);
+    } else {
+      // Fallback to sequential updates
+      await Promise.all(updates.map(({ id, data }) => this.updatePiece(id, data)));
+    }
+    
+    // Return updated pieces (for optimistic updates)
+    const updatedPieces: Piece[] = [];
+    for (const { id, data } of updates) {
+      const existingPiece = await this.storage.readOne<Piece>('pieces', id);
+      if (existingPiece) {
+        updatedPieces.push({
+          ...existingPiece,
+          ...data,
+          updatedAt: new Date()
+        });
+      }
+    }
+    
+    return updatedPieces;
   }
 
-  async updateNotificationSettings(settings: Partial<typeof defaultNotificationSettings>) {
-    await this.ensureInitialized();
-    const currentSettings = await this.getNotificationSettings();
-    const updatedSettings = { ...currentSettings, ...settings };
-    await this.storage.writeOne('notificationSettings', 'default', updatedSettings);
-    return updatedSettings;
-  }
 
   // Studio settings
   async getStudioSettings(): Promise<StudioSettings> {
     await this.ensureInitialized();
     const settings = await this.storage.readOne<StudioSettings>('studioSettings', 'default');
-    return settings || defaultStudioSettings;
+    
+    if (settings) {
+      return settings;
+    }
+    
+    // Return a complete default settings object
+    const defaults: StudioSettings = {
+      id: 'default',
+      studioName: 'Clay Cafe',
+      studioAddress: '',
+      studioPhone: '',
+      studioEmail: '',
+      studioWebsite: '',
+      studioInstagram: '',
+      
+      mondayHours: '9:00 AM - 5:00 PM',
+      tuesdayHours: '9:00 AM - 5:00 PM',
+      wednesdayHours: '9:00 AM - 5:00 PM',
+      thursdayHours: '9:00 AM - 5:00 PM',
+      fridayHours: '9:00 AM - 5:00 PM',
+      saturdayHours: '10:00 AM - 4:00 PM',
+      sundayHours: 'Closed',
+      
+      baseGlazeRate: 0.50,
+      firingFee: 5.00,
+      studioFee: 8.00,
+      
+      emailServiceEnabled: false,
+      emailjsServiceId: '',
+      emailjsTemplateId: '',
+      emailjsPublicKey: '',
+      emailFromName: 'Clay Cafe',
+      emailReplyTo: '',
+      
+      smsServiceEnabled: false,
+      twilioAccountSid: '',
+      twilioAuthToken: '',
+      twilioPhoneNumber: '',
+      
+      autoNotifyReadyPieces: true,
+      autoNotifyHoursDelay: 24,
+      reminderFrequencyDays: 7,
+      
+      timezone: 'America/New_York',
+      currency: 'USD',
+      dateFormat: 'MM/dd/yyyy',
+      
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      
+      // Legacy compatibility
+      glazeRatePerCubicInch: 0.50,
+      defaultTicketPrice: 8.00,
+    };
+    
+    return defaults;
   }
 
   async updateStudioSettings(settings: Partial<StudioSettings>): Promise<StudioSettings> {
