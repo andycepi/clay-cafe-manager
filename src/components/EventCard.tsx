@@ -41,18 +41,20 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   return (
     <div 
-      className="group bg-gradient-to-br from-white via-white to-gray-50/80 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer backdrop-blur-sm p-6"
+      className="group bg-gradient-to-br from-white via-white to-gray-50/80 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer backdrop-blur-sm p-3 sm:p-6"
       onClick={handleCardClick}
     >
       <div className="mb-4">
-        <div className="flex items-center space-x-3 mb-2">
-          <h3 className="text-xl font-bold text-gray-900">{event.name}</h3>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${EVENT_TYPE_COLORS[event.type] || 'bg-gray-100 text-gray-800'}`}>
-            {event.type.replace('-', ' ')}
-          </span>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${getStatusColor('event', event.status)}`}>
-            {event.status.replace('-', ' ')}
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">{event.name}</h3>
+          <div className="flex space-x-2">
+            <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold shadow-sm ${EVENT_TYPE_COLORS[event.type] || 'bg-gray-100 text-gray-800'}`}>
+              {event.type.replace('-', ' ')}
+            </span>
+            <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold shadow-sm ${getStatusColor('event', event.status)}`}>
+              {event.status.replace('-', ' ')}
+            </span>
+          </div>
         </div>
         
         {event.description && (

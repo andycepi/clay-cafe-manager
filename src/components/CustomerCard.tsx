@@ -34,15 +34,15 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
 
   return (
     <div 
-      className="group bg-gradient-to-br from-white via-white to-gray-50/80 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer backdrop-blur-sm p-6"
+      className="group bg-gradient-to-br from-white via-white to-gray-50/80 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer backdrop-blur-sm p-3 sm:p-6"
       onClick={handleCardClick}
     >
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-gray-900">{customer.name}</h3>
+      <div className="flex items-start justify-between mb-4 sm:mb-6">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{customer.name}</h3>
         </div>
         
-        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <div className="flex space-x-1 sm:space-x-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 ml-2">
           <Button
             variant="ghost"
             size="sm"

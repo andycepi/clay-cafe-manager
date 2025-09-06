@@ -269,39 +269,39 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Studio Settings</h1>
-          <p className="text-gray-600 mt-2">Configure your Clay Cafe studio preferences and templates</p>
+      <div className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Studio Settings</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Configure your Clay Cafe studio preferences and templates</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
           {/* Tab Navigation */}
           <div className="border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white">
-            <nav className="flex overflow-x-auto">
+            <nav className="flex overflow-x-auto scrollbar-hide px-2 sm:px-0">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 ${
+                  className={`flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 min-w-0 ${
                     activeTab === tab.id
                       ? 'text-blue-600 border-blue-500 bg-blue-50/50'
                       : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   {tab.icon}
-                  <span>{tab.label}</span>
+                  <span className="truncate text-center sm:text-left">{tab.label}</span>
                 </button>
               ))}
             </nav>
           </div>
 
           {/* Tab Content */}
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {activeTab === 'studio' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Studio Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Studio Information</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <Input
                     label="Studio Name"
                     value={formData.studioName || ''}
@@ -334,7 +334,7 @@ export const Settings: React.FC = () => {
                     placeholder="claycafe"
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="lg:col-span-2">
                   <Input
                     label="Studio Address"
                     value={formData.studioAddress || ''}
@@ -346,9 +346,9 @@ export const Settings: React.FC = () => {
             )}
 
             {activeTab === 'hours' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Business Hours</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Business Hours</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {daysOfWeek.map((day) => (
                     <Input
                       key={day.field}
@@ -372,9 +372,9 @@ export const Settings: React.FC = () => {
             )}
 
             {activeTab === 'pricing' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Pricing Settings</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Pricing Settings</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <Input
                     label="Base Glaze Rate (per cubic inch)"
                     type="number"
@@ -407,8 +407,8 @@ export const Settings: React.FC = () => {
             )}
 
             {activeTab === 'email' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Email Configuration</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Email Configuration</h2>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <input
@@ -424,7 +424,7 @@ export const Settings: React.FC = () => {
                   </div>
                   
                   {formData.emailServiceEnabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
                       <Input
                         label="EmailJS Service ID"
                         value={formData.emailjsServiceId || ''}
@@ -474,8 +474,8 @@ export const Settings: React.FC = () => {
             )}
 
             {activeTab === 'sms' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">SMS Configuration</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">SMS Configuration</h2>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <input
@@ -491,7 +491,7 @@ export const Settings: React.FC = () => {
                   </div>
                   
                   {formData.smsServiceEnabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
                       <Input
                         label="Twilio Account SID"
                         value={formData.twilioAccountSid || ''}
@@ -518,8 +518,8 @@ export const Settings: React.FC = () => {
             )}
 
             {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Notification Settings</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Notification Settings</h2>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <input
@@ -534,7 +534,7 @@ export const Settings: React.FC = () => {
                     </label>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
                     <Input
                       label="Auto-notification delay (hours)"
                       type="number"
@@ -557,38 +557,40 @@ export const Settings: React.FC = () => {
             )}
 
             {activeTab === 'templates' && (
-              <div className="space-y-8">
+              <div className="space-y-6 sm:space-y-8">
                 {/* Email Templates */}
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Email Templates</h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Email Templates</h3>
                     <Button
                       variant="primary"
                       onClick={() => {
                         resetEmailTemplateForm();
                         setShowEmailTemplateModal(true);
                       }}
-                      className="flex items-center space-x-2"
+                      className="flex items-center space-x-2 w-full sm:w-auto text-sm"
+                      size="sm"
                     >
-                      <Plus size={16} />
-                      <span>Add Email Template</span>
+                      <Plus size={14} />
+                      <span className="hidden sm:inline">Add Email Template</span>
+                      <span className="sm:hidden">Add Email</span>
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                     {emailTemplates.map((template) => (
                       <div
                         key={template.id}
-                        className="group bg-gradient-to-br from-white to-gray-50/80 rounded-xl p-4 border border-gray-200/50 hover:shadow-lg transition-all duration-300"
+                        className="group bg-gradient-to-br from-white to-gray-50/80 rounded-xl p-3 sm:p-4 border border-gray-200/50 hover:shadow-lg transition-all duration-300"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">{template.templateName}</h4>
-                            <p className="text-sm text-gray-600 capitalize">{template.templateType.replace('_', ' ')}</p>
+                            <h4 className="font-semibold text-sm sm:text-base text-gray-900 truncate">{template.templateName}</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 capitalize">{template.templateType.replace('_', ' ')}</p>
                             <p className="text-xs text-gray-500 mt-1">
                               {template.isActive ? 'Active' : 'Inactive'} • {template.isDefault ? 'Default' : 'Custom'}
                             </p>
                           </div>
-                          <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -605,7 +607,7 @@ export const Settings: React.FC = () => {
                               }}
                               className="text-blue-600 hover:bg-blue-100/80 rounded-full p-1"
                             >
-                              <Edit size={14} />
+                              <Edit size={12} />
                             </Button>
                             {!template.isDefault && (
                               <Button
@@ -614,7 +616,7 @@ export const Settings: React.FC = () => {
                                 onClick={() => deleteEmailTemplate(template.id)}
                                 className="text-red-600 hover:bg-red-100/80 rounded-full p-1"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={12} />
                               </Button>
                             )}
                           </div>
@@ -626,35 +628,37 @@ export const Settings: React.FC = () => {
 
                 {/* SMS Templates */}
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">SMS Templates</h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">SMS Templates</h3>
                     <Button
                       variant="primary"
                       onClick={() => {
                         resetSMSTemplateForm();
                         setShowSMSTemplateModal(true);
                       }}
-                      className="flex items-center space-x-2"
+                      className="flex items-center space-x-2 w-full sm:w-auto text-sm"
+                      size="sm"
                     >
-                      <Plus size={16} />
-                      <span>Add SMS Template</span>
+                      <Plus size={14} />
+                      <span className="hidden sm:inline">Add SMS Template</span>
+                      <span className="sm:hidden">Add SMS</span>
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                     {smsTemplates.map((template) => (
                       <div
                         key={template.id}
-                        className="group bg-gradient-to-br from-white to-gray-50/80 rounded-xl p-4 border border-gray-200/50 hover:shadow-lg transition-all duration-300"
+                        className="group bg-gradient-to-br from-white to-gray-50/80 rounded-xl p-3 sm:p-4 border border-gray-200/50 hover:shadow-lg transition-all duration-300"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">{template.templateName}</h4>
-                            <p className="text-sm text-gray-600 capitalize">{template.templateType.replace('_', ' ')}</p>
+                            <h4 className="font-semibold text-sm sm:text-base text-gray-900 truncate">{template.templateName}</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 capitalize">{template.templateType.replace('_', ' ')}</p>
                             <p className="text-xs text-gray-500 mt-1">
                               {template.isActive ? 'Active' : 'Inactive'} • {template.isDefault ? 'Default' : 'Custom'}
                             </p>
                           </div>
-                          <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -670,7 +674,7 @@ export const Settings: React.FC = () => {
                               }}
                               className="text-blue-600 hover:bg-blue-100/80 rounded-full p-1"
                             >
-                              <Edit size={14} />
+                              <Edit size={12} />
                             </Button>
                             {!template.isDefault && (
                               <Button
@@ -679,7 +683,7 @@ export const Settings: React.FC = () => {
                                 onClick={() => deleteSMSTemplate(template.id)}
                                 className="text-red-600 hover:bg-red-100/80 rounded-full p-1"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={12} />
                               </Button>
                             )}
                           </div>
@@ -692,14 +696,14 @@ export const Settings: React.FC = () => {
             )}
 
             {/* Save Button */}
-            <div className="flex justify-end pt-6 border-t border-gray-200/50 mt-8">
+            <div className="flex justify-end pt-4 sm:pt-6 border-t border-gray-200/50 mt-6 sm:mt-8">
               <Button
                 variant="primary"
                 onClick={handleSave}
                 loading={saving}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 w-full sm:w-auto"
               >
-                <Save size={18} />
+                <Save size={16} />
                 <span>Save Settings</span>
               </Button>
             </div>
@@ -716,8 +720,9 @@ export const Settings: React.FC = () => {
         }}
         title={editingEmailTemplate ? 'Edit Email Template' : 'Create Email Template'}
         size="lg"
+        className="mx-2 sm:mx-0"
       >
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <Input
             label="Template Name"
             value={emailTemplateForm.templateName}
@@ -751,7 +756,7 @@ export const Settings: React.FC = () => {
               className="block w-full rounded-xl border-2 border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
               placeholder="Hi {{customer_name}}, your pottery is ready for pickup..."
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1 break-words">
               Available variables: {`{{customer_name}}, {{studio_name}}, {{studio_phone}}, {{piece_count}}, {{status}}, {{total_amount}}`}
             </p>
           </div>
@@ -769,7 +774,7 @@ export const Settings: React.FC = () => {
             </label>
           </div>
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
             <Button
               variant="outline"
               onClick={() => {
@@ -800,8 +805,9 @@ export const Settings: React.FC = () => {
         }}
         title={editingSMSTemplate ? 'Edit SMS Template' : 'Create SMS Template'}
         size="lg"
+        className="mx-2 sm:mx-0"
       >
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <Input
             label="Template Name"
             value={smsTemplateForm.templateName}
@@ -829,7 +835,7 @@ export const Settings: React.FC = () => {
               className="block w-full rounded-xl border-2 border-gray-200 bg-white/80 backdrop-blur-sm shadow-sm px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
               placeholder="Hi {{customer_name}}! Your pottery is ready for pickup at {{studio_name}}..."
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1 break-words">
               {smsTemplateForm.messageTemplate.length}/160 characters • 
               Available variables: {`{{customer_name}}, {{studio_name}}, {{studio_phone}}, {{piece_count}}, {{status}}`}
             </p>
@@ -848,7 +854,7 @@ export const Settings: React.FC = () => {
             </label>
           </div>
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
             <Button
               variant="outline"
               onClick={() => {

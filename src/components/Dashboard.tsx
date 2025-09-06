@@ -582,37 +582,39 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* View Mode Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="bg-white rounded-lg shadow mb-4 sm:mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
-              {[
-                { key: 'events', label: 'Events', icon: Calendar },
-                { key: 'pieces', label: 'Pieces', icon: Palette },
-                { key: 'customers', label: 'Customers', icon: Users },
-                { key: 'overview', label: 'Overview', icon: TrendingUp },
-                { key: 'settings', label: 'Settings', icon: SettingsIcon }
-              ].map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setViewMode(key as ViewMode)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                    viewMode === key
-                      ? 'border-amber-500 text-amber-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon size={16} />
-                  <span>{label}</span>
-                </button>
-              ))}
+            <nav className="-mb-px flex overflow-x-auto scrollbar-hide px-2 sm:px-6">
+              <div className="flex space-x-1 sm:space-x-8 min-w-max">
+                {[
+                  { key: 'events', label: 'Events', icon: Calendar },
+                  { key: 'pieces', label: 'Pieces', icon: Palette },
+                  { key: 'customers', label: 'Customers', icon: Users },
+                  { key: 'overview', label: 'Overview', icon: TrendingUp },
+                  { key: 'settings', label: 'Settings', icon: SettingsIcon }
+                ].map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setViewMode(key as ViewMode)}
+                    className={`flex flex-col sm:flex-row items-center justify-center sm:space-x-2 py-3 sm:py-4 px-3 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 ${
+                      viewMode === key
+                        ? 'border-amber-500 text-amber-600 bg-amber-50/50'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50/50'
+                    }`}
+                  >
+                    <Icon size={18} className="sm:w-4 sm:h-4" />
+                    <span className="mt-1 sm:mt-0">{label}</span>
+                  </button>
+                ))}
+              </div>
             </nav>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
+        <div className="bg-white rounded-lg shadow p-3 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="w-full">
               <Input
                 placeholder="Search customers or pieces..."
                 value={searchTerm}
@@ -620,35 +622,36 @@ export const Dashboard: React.FC = () => {
                 className="w-full"
               />
             </div>
-            {viewMode === 'pieces' && (
-              <div className="sm:w-48">
-                <Select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-                  options={[
-                    { value: 'all', label: 'All Pieces' },
-                    { value: 'in-progress', label: 'In Progress' },
-                    { value: 'ready-for-pickup', label: 'Ready for Pickup' },
-                    { value: 'picked-up', label: 'Picked Up' }
-                  ]}
-                />
-              </div>
-            )}
-            {viewMode === 'events' && (
-              <div className="sm:w-48">
-                <Select
-                  value={eventFilterStatus}
-                  onChange={(e) => setEventFilterStatus(e.target.value as EventFilterStatus)}
-                  options={[
-                    { value: 'all', label: 'All Events' },
-                    { value: 'upcoming', label: 'Upcoming' },
-                    { value: 'in-progress', label: 'In Progress' },
-                    { value: 'completed', label: 'Completed' },
-                    { value: 'cancelled', label: 'Cancelled' }
-                  ]}
-                />
-              </div>
-            )}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              {viewMode === 'pieces' && (
+                <div className="w-full sm:w-48">
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+                    options={[
+                      { value: 'all', label: 'All Pieces' },
+                      { value: 'in-progress', label: 'In Progress' },
+                      { value: 'ready-for-pickup', label: 'Ready for Pickup' },
+                      { value: 'picked-up', label: 'Picked Up' }
+                    ]}
+                  />
+                </div>
+              )}
+              {viewMode === 'events' && (
+                <div className="w-full sm:w-48">
+                  <Select
+                    value={eventFilterStatus}
+                    onChange={(e) => setEventFilterStatus(e.target.value as EventFilterStatus)}
+                    options={[
+                      { value: 'all', label: 'All Events' },
+                      { value: 'upcoming', label: 'Upcoming' },
+                      { value: 'in-progress', label: 'In Progress' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'cancelled', label: 'Cancelled' }
+                    ]}
+                  />
+                </div>
+              )}
           </div>
         </div>
 

@@ -138,9 +138,9 @@ export const PieceCard: React.FC<PieceCardProps> = ({
       className="group bg-gradient-to-br from-white via-white to-gray-50/80 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer backdrop-blur-sm overflow-hidden"
       onClick={handleCardClick}
     >
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         {piece.imageUrl && (
-          <div className="mb-6 aspect-[4/5] overflow-hidden rounded-xl relative">
+          <div className="mb-4 sm:mb-6 aspect-[4/5] overflow-hidden rounded-xl relative">
             <img 
               src={piece.imageUrl} 
               alt="Piece" 
@@ -150,22 +150,22 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           </div>
         )}
 
-        <div className="flex items-start justify-between mb-6">
-          <div className="space-y-2">
-            <h4 className="font-bold text-lg text-gray-900">{customer.name}</h4>
+        <div className="flex items-start justify-between mb-4 sm:mb-6">
+          <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
+            <h4 className="font-bold text-base sm:text-lg text-gray-900 truncate">{customer.name}</h4>
             <div className="flex items-center gap-2">
-              <span className={`inline-block w-3 h-3 rounded-full ${
+              <span className={`inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
                 piece.status === 'ready-for-pickup' ? 'bg-green-400 animate-pulse' :
                 piece.status === 'picked-up' ? 'bg-gray-400' :
                 piece.status === 'bisque-fired' ? 'bg-blue-400' :
                 piece.status === 'glazed' ? 'bg-purple-400' :
                 'bg-yellow-400'
               }`} />
-              <p className="text-sm text-gray-600 capitalize font-medium">{piece.status.replace('-', ' ')}</p>
+              <p className="text-xs sm:text-sm text-gray-600 capitalize font-medium">{piece.status.replace('-', ' ')}</p>
             </div>
           </div>
           
-          <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="flex space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 ml-2">
             {isReadyForPickup && !isPickedUp && (
               <Button
                 variant="ghost"
@@ -205,14 +205,14 @@ export const PieceCard: React.FC<PieceCardProps> = ({
           </div>
         </div>
 
-        <div className="space-y-4 mb-6">
-          <div className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700">Status:</span>
+        <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+          <div className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Status:</span>
               <select
                 value={piece.status}
                 onChange={(e) => onStatusChange(piece.id, e.target.value as Piece['status'])}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border-2 bg-white/80 backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${getPieceStatusInfo(piece.status).color} border-gray-200 hover:border-gray-300`}
+                className={`w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium border-2 bg-white/80 backdrop-blur-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${getPieceStatusInfo(piece.status).color} border-gray-200 hover:border-gray-300`}
               >
                 {PIECE_STATUSES.map(status => (
                   <option key={status.value} value={status.value}>
@@ -222,8 +222,8 @@ export const PieceCard: React.FC<PieceCardProps> = ({
               </select>
             </div>
             
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700">Cubic Inches:</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Cubic Inches:</span>
               <div className="flex items-center space-x-2">
                 <input
                   type="number"
@@ -234,7 +234,7 @@ export const PieceCard: React.FC<PieceCardProps> = ({
                     const value = parseFloat(e.target.value) || 0;
                     handleCubicInchesInputChange(value);
                   }}
-                  className={`w-20 px-3 py-2 text-sm font-medium border-2 rounded-lg text-right focus:outline-none transition-all duration-200 ${
+                  className={`w-16 sm:w-20 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium border-2 rounded-lg text-right focus:outline-none transition-all duration-200 ${
                     isUpdating 
                       ? 'border-blue-300 bg-blue-50/80 backdrop-blur-sm' 
                       : hasUnsavedChanges 
@@ -255,14 +255,14 @@ export const PieceCard: React.FC<PieceCardProps> = ({
             </div>
 
             {piece.glazeTotal && piece.glazeTotal > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">Glaze Cost:</span>
-                <span className="font-bold text-lg text-green-600">${piece.glazeTotal.toFixed(2)}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">Glaze Cost:</span>
+                <span className="font-bold text-base sm:text-lg text-green-600">${piece.glazeTotal.toFixed(2)}</span>
               </div>
             )}
             
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700">Payment:</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Payment:</span>
               <label className="relative flex items-center cursor-pointer group">
                 <input
                   type="checkbox"
