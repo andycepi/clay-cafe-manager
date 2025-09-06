@@ -720,7 +720,6 @@ export const Settings: React.FC = () => {
         }}
         title={editingEmailTemplate ? 'Edit Email Template' : 'Create Email Template'}
         size="lg"
-        className="mx-2 sm:mx-0"
       >
         <div className="space-y-3 sm:space-y-4">
           <Input
@@ -805,7 +804,6 @@ export const Settings: React.FC = () => {
         }}
         title={editingSMSTemplate ? 'Edit SMS Template' : 'Create SMS Template'}
         size="lg"
-        className="mx-2 sm:mx-0"
       >
         <div className="space-y-3 sm:space-y-4">
           <Input
