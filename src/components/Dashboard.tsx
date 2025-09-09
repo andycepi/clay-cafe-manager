@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Users, Palette, TrendingUp, Calendar, Settings as SettingsIcon } from 'lucide-react';
+import { Users, Palette, TrendingUp, Calendar, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { Customer, Piece, Event, EventBooking, StudioSettings } from '../types';
 import { EventsViewSection } from './EventsViewSection';
 import { PiecesViewSection } from './PiecesViewSection';
@@ -20,6 +20,7 @@ import { NotificationModal } from './NotificationModal';
 import { Settings } from './Settings';
 import { calculateGlazeCost } from '../utils/glazeCalculations';
 import { useDatabase } from '../hooks/useDatabase';
+import { useAuth } from '../context/AuthContext';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
 
@@ -29,6 +30,7 @@ type EventFilterStatus = 'all' | 'upcoming' | 'in-progress' | 'completed' | 'can
 type PieceSortMode = 'status' | 'event' | 'customer' | 'date';
 
 export const Dashboard: React.FC = () => {
+  const { logout } = useAuth();
   const {
     customers,
     pieces,
@@ -498,6 +500,13 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      logout();
+      toast.success('Logged out successfully');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -533,21 +542,38 @@ export const Dashboard: React.FC = () => {
                   <Calendar size={16} />
                   <span>Add Event</span>
                 </Button>
+                <Button 
+                  onClick={handleLogout} 
+                  variant="outline" 
+                  className="flex items-center space-x-2 text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <LogOut size={16} />
+                  <span>Logout</span>
+                </Button>
               </div>
             </div>
             {/* Mobile buttons row */}
             <div className="flex sm:hidden space-x-2 mt-3">
               <Button onClick={handleAddCustomer} size="sm" className="flex items-center space-x-1 flex-1">
                 <Users size={14} />
-                <span className="text-xs">Add Customer</span>
+                <span className="text-xs">Customer</span>
               </Button>
               <Button onClick={() => handleAddPiece()} size="sm" className="flex items-center space-x-1 flex-1">
                 <Palette size={14} />
-                <span className="text-xs">Add Piece</span>
+                <span className="text-xs">Piece</span>
               </Button>
               <Button onClick={handleAddEvent} size="sm" className="flex items-center space-x-1 flex-1">
                 <Calendar size={14} />
-                <span className="text-xs">Add Event</span>
+                <span className="text-xs">Event</span>
+              </Button>
+              <Button 
+                onClick={handleLogout} 
+                size="sm" 
+                variant="outline" 
+                className="flex items-center space-x-1 text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <LogOut size={14} />
+                <span className="text-xs">Logout</span>
               </Button>
             </div>
           </div>
