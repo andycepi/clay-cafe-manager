@@ -140,19 +140,19 @@ export const Dashboard: React.FC = () => {
         return;
       }
       
-      // Get existing customers to check for duplicates
-      const existingEmails = new Set(customers.map(c => c.email.toLowerCase()));
+      // Get existing customers to check for duplicates by name
+      const existingNames = new Set(customers.map(c => c.name.toLowerCase().trim()));
       
       // Process customers with duplicate detection
       for (const customerData of validCustomers) {
-        const email = customerData.Email.trim().toLowerCase();
         const name = customerData.name.trim();
+        const nameLower = name.toLowerCase();
         
-        // Check for duplicates by email
-        if (existingEmails.has(email)) {
+        // Check for duplicates by name
+        if (existingNames.has(nameLower)) {
           duplicateCount++;
           duplicateNames.push(name);
-          console.log('Skipping duplicate customer:', name, email);
+          console.log('Skipping duplicate customer by name:', name);
           continue;
         }
         
@@ -164,8 +164,8 @@ export const Dashboard: React.FC = () => {
             checkedIn: false
           });
           
-          // Add to existing emails set to prevent duplicates within the same import
-          existingEmails.add(email);
+          // Add to existing names set to prevent duplicates within the same import
+          existingNames.add(nameLower);
           successCount++;
         } catch (error) {
           console.error('Error adding customer:', name, error);

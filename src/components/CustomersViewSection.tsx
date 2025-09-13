@@ -31,19 +31,34 @@ export const CustomersViewSection: React.FC<CustomersViewSectionProps> = ({
 
   if (customers.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-400 mb-4">
-          <Users size={48} />
+      <div className="space-y-4">
+        <div className="flex justify-start">
+          <Button type="button" onClick={() => fileInputRef.current?.click()}>
+            Import Customers (CSV)
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: 'none' }}
+            onChange={onCSVUpload}
+          />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          No customers found
-        </h3>
-        <p className="text-gray-600 mb-4">
-          {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first customer'}
-        </p>
-        <Button onClick={onAddCustomer}>
-          Add Customer
-        </Button>
+        
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            <Users size={48} />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No customers found
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first customer or importing from CSV'}
+          </p>
+          <Button onClick={onAddCustomer}>
+            Add Customer
+          </Button>
+        </div>
       </div>
     );
   }
