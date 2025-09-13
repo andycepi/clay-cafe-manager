@@ -127,6 +127,8 @@ export const Dashboard: React.FC = () => {
     try {
       let successCount = 0;
       let errorCount = 0;
+      let duplicateCount = 0;
+      const duplicateNames: string[] = [];
       
       // Filter out empty rows and validate required fields
       const validCustomers = customersArray.filter(customerData => 
@@ -138,29 +140,71 @@ export const Dashboard: React.FC = () => {
         return;
       }
       
-      // Process customers with proper error handling
+      // Get existing customers to check for duplicates
+      const existingEmails = new Set(customers.map(c => c.email.toLowerCase()));
+      
+      // Process customers with duplicate detection
       for (const customerData of validCustomers) {
+        const email = customerData.Email.trim().toLowerCase();
+        const name = customerData.name.trim();
+        
+        // Check for duplicates by email
+        if (existingEmails.has(email)) {
+          duplicateCount++;
+          duplicateNames.push(name);
+          console.log('Skipping duplicate customer:', name, email);
+          continue;
+        }
+        
         try {
           await addCustomer({
-            name: customerData.name.trim(),
+            name: name,
             email: customerData.Email.trim(),
             phone: customerData.Phone?.trim() || undefined,
             checkedIn: false
           });
+          
+          // Add to existing emails set to prevent duplicates within the same import
+          existingEmails.add(email);
           successCount++;
         } catch (error) {
-          console.error('Error adding customer:', customerData.name, error);
+          console.error('Error adding customer:', name, error);
           errorCount++;
         }
       }
       
-      // Show results
+      // Show comprehensive results
+      const messages = [];
+      
       if (successCount > 0) {
-        toast.success(`Successfully imported ${successCount} customer${successCount === 1 ? '' : 's'}`);
+        messages.push(`✅ Successfully imported ${successCount} new customer${successCount === 1 ? '' : 's'}`);
       }
+      
+      if (duplicateCount > 0) {
+        const duplicateList = duplicateNames.length <= 3 
+          ? duplicateNames.join(', ')
+          : `${duplicateNames.slice(0, 3).join(', ')} and ${duplicateNames.length - 3} more`;
+        messages.push(`⚠️ Skipped ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}: ${duplicateList}`);
+      }
+      
       if (errorCount > 0) {
-        toast.error(`Failed to import ${errorCount} customer${errorCount === 1 ? '' : 's'}`);
+        messages.push(`❌ Failed to import ${errorCount} customer${errorCount === 1 ? '' : 's'}`);
       }
+      
+      // Show results with appropriate toast type
+      if (messages.length > 0) {
+        const fullMessage = messages.join('\n');
+        if (errorCount > 0) {
+          toast.error(fullMessage, { duration: 6000 });
+        } else if (duplicateCount > 0 && successCount > 0) {
+          toast.success(fullMessage, { duration: 6000 });
+        } else if (duplicateCount > 0) {
+          toast.error(`All ${duplicateCount} customers were duplicates - no new customers imported`, { duration: 4000 });
+        } else {
+          toast.success(fullMessage, { duration: 4000 });
+        }
+      }
+      
     } catch (error) {
       console.error('CSV import error:', error);
       toast.error('Failed to import customers from CSV');
