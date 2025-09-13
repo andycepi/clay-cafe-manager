@@ -17,8 +17,8 @@ export class SupabaseAdapter implements IStorageAdapter {
     if (typeof obj !== 'object') return obj;
     if (Array.isArray(obj)) return obj.map(item => this.convertToSnakeCase(item));
     
-    // Fields that should be excluded from database writes (UI-only fields)
-    const excludeFields = ['checkedIn', 'checked_in'];
+    // Fields that should be excluded from database writes (UI-only fields or missing from schema)
+    const excludeFields = ['checkedIn', 'checked_in', 'instagram'];
     
     const converted: any = {};
     for (const [key, value] of Object.entries(obj)) {

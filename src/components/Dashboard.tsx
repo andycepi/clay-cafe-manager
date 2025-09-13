@@ -145,7 +145,6 @@ export const Dashboard: React.FC = () => {
             name: customerData.name.trim(),
             email: customerData.Email.trim(),
             phone: customerData.Phone?.trim() || undefined,
-            instagram: customerData.instagram?.trim() || undefined,
             checkedIn: false
           });
           successCount++;
