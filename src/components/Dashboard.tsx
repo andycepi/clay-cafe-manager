@@ -117,21 +117,55 @@ export const Dashboard: React.FC = () => {
         importCustomers(results.data);
       },
       error: (err) => {
-        alert('Error parsing CSV: ' + err.message);
+        console.error('CSV parsing error:', err);
+        toast.error('Error parsing CSV: ' + err.message);
       }
     });
   };
   
-  const importCustomers = (customersArray: any[]) => {
-    customersArray.forEach(customerData => {
-      addCustomer({
-        name: customerData.name,
-        email: customerData.Email,
-        phone: customerData.Phone,
-        checkedIn: false,
-        // ...map other fields as needed
-      });
-    });
+  const importCustomers = async (customersArray: any[]) => {
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Filter out empty rows and validate required fields
+      const validCustomers = customersArray.filter(customerData => 
+        customerData.name?.trim() && customerData.Email?.trim()
+      );
+      
+      if (validCustomers.length === 0) {
+        toast.error('No valid customers found in CSV. Please ensure name and Email columns are filled.');
+        return;
+      }
+      
+      // Process customers with proper error handling
+      for (const customerData of validCustomers) {
+        try {
+          await addCustomer({
+            name: customerData.name.trim(),
+            email: customerData.Email.trim(),
+            phone: customerData.Phone?.trim() || undefined,
+            instagram: customerData.instagram?.trim() || undefined,
+            checkedIn: false
+          });
+          successCount++;
+        } catch (error) {
+          console.error('Error adding customer:', customerData.name, error);
+          errorCount++;
+        }
+      }
+      
+      // Show results
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} customer${successCount === 1 ? '' : 's'}`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} customer${errorCount === 1 ? '' : 's'}`);
+      }
+    } catch (error) {
+      console.error('CSV import error:', error);
+      toast.error('Failed to import customers from CSV');
+    }
   };
 
   const filteredPieces = useMemo(() => {
