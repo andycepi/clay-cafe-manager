@@ -810,8 +810,8 @@ export const Dashboard: React.FC = () => {
       <Modal
         isOpen={showEventBookingModal}
         onClose={() => setShowEventBookingModal(false)}
-        title="Book Customer"
-        size="xl"
+        title="Book Customers"
+        size="2xl"
         zIndex="overlay"
       >
         {selectedEvent && (

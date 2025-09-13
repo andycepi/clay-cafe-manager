@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Event, Customer, EventBooking } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { Search, User, UserCheck } from 'lucide-react';
+import { Search, User, UserCheck, Users } from 'lucide-react';
 
 interface SimpleCustomerBookingProps {
   event: Event;
@@ -24,11 +24,12 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
   onCancel
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomerData, setNewCustomerData] = useState({
     name: '', email: '', phone: ''
   });
+  const [bulkMode, setBulkMode] = useState(false);
 
   // Get booked customer IDs for quick lookup
   const bookedCustomerIds = useMemo(() => {
@@ -55,19 +56,64 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
   // Available spots calculation
   const availableSpots = event.maxCapacity - bookedCustomerIds.size;
 
-  const handleBookCustomer = () => {
-    if (!selectedCustomerId) return;
+  // Available customers for bulk selection
+  const availableCustomers = useMemo(() => {
+    return filteredCustomers.filter(customer => !bookedCustomerIds.has(customer.id));
+  }, [filteredCustomers, bookedCustomerIds]);
+
+  // Handle individual customer selection in bulk mode
+  const handleCustomerToggle = (customerId: string) => {
+    if (bulkMode) {
+      const newSelected = new Set(selectedCustomerIds);
+      if (newSelected.has(customerId)) {
+        newSelected.delete(customerId);
+      } else {
+        // Check if we have enough spots
+        if (newSelected.size < availableSpots) {
+          newSelected.add(customerId);
+        }
+      }
+      setSelectedCustomerIds(newSelected);
+    } else {
+      // Single selection mode - clear others and set this one
+      setSelectedCustomerIds(new Set([customerId]));
+    }
+  };
+
+  // Select all available customers
+  const handleSelectAll = () => {
+    const maxSelectable = Math.min(availableCustomers.length, availableSpots);
+    const customersToSelect = availableCustomers.slice(0, maxSelectable).map(c => c.id);
+    setSelectedCustomerIds(new Set(customersToSelect));
+  };
+
+  // Clear all selections
+  const handleClearAll = () => {
+    setSelectedCustomerIds(new Set());
+  };
+
+  // Toggle bulk mode
+  const handleToggleBulkMode = () => {
+    setBulkMode(!bulkMode);
+    setSelectedCustomerIds(new Set()); // Clear selections when switching modes
+  };
+
+  const handleBookCustomers = () => {
+    if (selectedCustomerIds.size === 0) return;
     
-    const booking = {
-      eventId: event.id,
-      customerId: selectedCustomerId,
-      bookingDate: new Date(),
-      status: 'confirmed' as EventBooking['status'],
-      notes: ''
-    };
+    // Submit bookings for all selected customers
+    selectedCustomerIds.forEach(customerId => {
+      const booking = {
+        eventId: event.id,
+        customerId: customerId,
+        bookingDate: new Date(),
+        status: 'confirmed' as EventBooking['status'],
+        notes: ''
+      };
+      onSubmit(booking);
+    });
     
-    onSubmit(booking);
-    setSelectedCustomerId('');
+    setSelectedCustomerIds(new Set());
   };
 
   const handleAddNewCustomer = async (e: React.FormEvent) => {
@@ -81,7 +127,7 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
       });
       
       // Auto-select the new customer for booking
-      setSelectedCustomerId(newCustomer.id);
+      setSelectedCustomerIds(new Set([newCustomer.id]));
       setShowNewCustomerForm(false);
       setNewCustomerData({ name: '', email: '', phone: '' });
     } catch (error) {
@@ -131,12 +177,44 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
             </div>
           </div>
 
+          {/* Bulk Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-gray-700">
+              {bulkMode ? 'Select Customers to Book' : 'Select Customer to Book'}
+            </label>
+            <div className="flex items-center space-x-2">
+              <Button
+                size="sm"
+                variant={bulkMode ? "default" : "outline"}
+                onClick={handleToggleBulkMode}
+                className="flex items-center space-x-1"
+              >
+                <Users size={14} />
+                <span>{bulkMode ? 'Bulk Mode' : 'Single Mode'}</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Bulk Selection Controls */}
+          {bulkMode && availableCustomers.length > 0 && (
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-sm text-gray-600">
+                {selectedCustomerIds.size} of {Math.min(availableCustomers.length, availableSpots)} customers selected
+              </span>
+              <div className="space-x-2">
+                <Button size="sm" variant="outline" onClick={handleSelectAll}>
+                  Select All
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleClearAll}>
+                  Clear All
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Customer Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Customer to Book
-            </label>
-            <div className="max-h-40 overflow-y-auto border rounded-lg">
+            <div className="max-h-80 overflow-y-auto border rounded-lg">
               {filteredCustomers.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
                   No customers found
@@ -150,16 +228,16 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
                       className={`p-3 border-b last:border-b-0 flex items-center justify-between ${
                         isBooked ? 'bg-green-50' : 'hover:bg-gray-50 cursor-pointer'
                       }`}
-                      onClick={!isBooked ? () => setSelectedCustomerId(customer.id) : undefined}
+                      onClick={!isBooked ? () => handleCustomerToggle(customer.id) : undefined}
                     >
                       <div className="flex items-center space-x-3">
                         <input
-                          type="radio"
+                          type={bulkMode ? "checkbox" : "radio"}
                           name="customer"
                           value={customer.id}
-                          checked={selectedCustomerId === customer.id}
-                          onChange={() => !isBooked && setSelectedCustomerId(customer.id)}
-                          disabled={isBooked}
+                          checked={selectedCustomerIds.has(customer.id)}
+                          onChange={() => !isBooked && handleCustomerToggle(customer.id)}
+                          disabled={isBooked || (!selectedCustomerIds.has(customer.id) && selectedCustomerIds.size >= availableSpots && bulkMode)}
                           className="h-4 w-4"
                         />
                         <div>
@@ -255,9 +333,9 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        {selectedCustomerId && availableSpots > 0 && (
-          <Button onClick={handleBookCustomer}>
-            Book Selected Customer
+        {selectedCustomerIds.size > 0 && availableSpots > 0 && (
+          <Button onClick={handleBookCustomers}>
+            {selectedCustomerIds.size === 1 ? 'Book Selected Customer' : `Book ${selectedCustomerIds.size} Customers`}
           </Button>
         )}
       </div>
