@@ -185,7 +185,7 @@ export const SimpleCustomerBooking: React.FC<SimpleCustomerBookingProps> = ({
             <div className="flex items-center space-x-2">
               <Button
                 size="sm"
-                variant={bulkMode ? "default" : "outline"}
+                variant={bulkMode ? "primary" : "outline"}
                 onClick={handleToggleBulkMode}
                 className="flex items-center space-x-1"
               >
